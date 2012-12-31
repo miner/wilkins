@@ -8,6 +8,12 @@
 (defn jdk16? []
   #x/condf [jdk1.6.* true])
 
+(defn foo []
+  (get {:a 1 :b 2 :ok 42}
+       #x/condf [clj1.3.* :unsupported
+                 (or jdk1.9+ clj2.0.*) :untested
+                 (and clj1.4+ jdk1.5+) :ok]
+       :fail))
 
 (deftest running-on-clr []
   (let [{:keys [major minor]} *clojure-version*]
@@ -17,4 +23,5 @@
   (let [jdk (System/getProperty "java.version")]
     (is (= (jdk16?) (.startsWith jdk "1.6.")))))
 
-             
+(deftest foo-test
+  (is (= (foo) 42)))

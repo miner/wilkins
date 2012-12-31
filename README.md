@@ -6,7 +6,7 @@ Experimental lib for Clojure conditional compilation using tagged literals
 
 You probably shouldn't yet.
 
-## In Honor of Bob Wilkins
+## Bob Wilkins
 
 Named in honor of [Bob Wilkins](http://en.wikipedia.org/wiki/Bob_Wilkins), host of KTVU's
 ["Creature Features"](http://www.bobwilkins.net/creaturefeatures.htm) (1971-79).
