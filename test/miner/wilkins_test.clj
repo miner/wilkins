@@ -30,3 +30,9 @@
   (is (= #x/condf [#'miner.wilkins/*features* :ok] :ok))
   (is (= #x/condf [#'miner.wilkins/not-there :bad #'miner.wilkins/condf :ok] :ok))
   (is (nil? #x/condf [#'miner.wilkins/not-there :bad])))
+
+(deftest binding-test
+  (binding [miner.wilkins/*features* {'xyz/foo {:id 'xyz/foo :version '(3 4 5)}
+                                      'zzz/bar (parse-feature 'zzz/bar20.34)}]
+    (is (= 42 (read-string "#x/condf [xyz/foo4.2+ :bad xyz/foo3.2+ 42 else :bad]")))
+    (is (= 42 (read-string "#x/condf [xyz/foo4.2+ :bad zzz/bar20.* 42 else :bad]")))))

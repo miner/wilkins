@@ -91,8 +91,6 @@
         (compare-versions (:version actual) (:version request)))))
 
 
-;; Add support AND OR and NOT for boolean logic
-
 (defn vsym-sat? [vsym]
   (or (= vsym 'else) (= vsym :else)
       (let [req (parse-feature (str vsym))
@@ -166,7 +164,7 @@
                   not (not (feature-sat? (second feature)))))))
 
 
-
+;; data-reader
 (defn condf [tests-and-forms]
   ;; tests-and-forms is sequence of alternating tests and forms.
   ;; the first testform to succeed returns the next form as the result.
@@ -178,6 +176,6 @@
 
 
 ;; for use at runtime as opposed to readtime
-(defmacro feature-cond [&clauses]
+(defmacro feature-cond [& clauses]
   ;; TBD
   nil)

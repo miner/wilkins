@@ -38,10 +38,10 @@ The compact form of a feature requirement uses a single symbol.  For example, `c
 trailing `+` means "or greater".  A trailing `.*` means "any increment", but the previous parts must
 match exactly.  Only one `+` or `*` is allowed in a feature requirement.  A qualifier string may
 follow the version number, but in that case an exact match is required.  For example, `clj1.5-RC1`
-matches only clojure-1.5-RC1, and not any other version.
+matches exactly Clojure "1.5-RC1", and not any other version.
 
 Unqualified feature IDs are reserved for Wilkins.  Users may create namespace-qualified IDs
-following the usual convention for ownership or uniqueness of the namespace.
+following the usual convention for ownership of the namespace.
 
 A feature requirement can also be a literal vector of ID and string version to use a feature ID that
 contains a digit, such as `[foo.bar/i18n "1.2+"]`.
@@ -58,7 +58,7 @@ and `y/bar`4.5.
 
 ## Details
 
-The dynamic var `miner.wilkins/*features*` is a map of feature ids to features.  Each feature is a
+The dynamic var `miner.wilkins/*features*` is a map of feature IDs to features.  Each feature is a
 map with keys: `:id` (value: symbol), `:version` (value: list of ints), and `:qualifier` (value: a
 String).  The :version is a list of ints corresponding to the version string.  So "1.2.3" is
 :version (1 2 3).
