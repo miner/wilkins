@@ -1,17 +1,6 @@
 (ns miner.wilkins
   (:require [clojure.string :as str]))
 
-;; a feature spec can be any of the following:
-;; 1. var feature --fully qualified symbol -- succeeds if symbol is resolved
-;; 2. version feature -- non-namespace symbol -- indicates a spec --
-;;    key maps into features, version, etc must match
-;; 3. vector -- lein style [name "ver"] where ver is a double-quoted string like "1.2.3"
-;; 4. list starting with AND, OR or NOT (symbols) -- boolean combinations of feature specs
-
-;; java1.5 clj1.4+ clj1.5 java1.4.*
-;; any qualifier implies an exact match only
-
-
 ;; should verify that not both .* and + are used
 ;; only one version terminating .* is allowed
 ;; also if there's a qual, neither wildcard is allowed
@@ -164,7 +153,7 @@
     
 
 (defn feature-sat? [feature]
-  (cond (symbol? feature)  (or (clojure-var? feature) (vsym-sat? feature))
+  (cond (symbol? feature)  (vsym-sat? feature)
         (vector? feature)  (vector-sat? feature)
         :else (let [op (first feature)]
                 (case op
