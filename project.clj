@@ -1,4 +1,4 @@
-(defproject com.velisco/wilkins "0.1.1"
+(defproject com.velisco/wilkins "0.1.2"
   :description "Experimental lib for Clojure conditional reader using tagged literals"
   :url "http://github.com/miner/wilkins"
   :license {:name "Eclipse Public License"
