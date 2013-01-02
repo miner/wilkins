@@ -1,10 +1,6 @@
 (ns miner.wilkins
   (:require [clojure.string :as str]))
 
-;; should verify that not both .* and + are used
-;; only one version terminating .* is allowed
-;; also if there's a qual, neither wildcard is allowed
-
 (defn parse-version [major minor increm]
   (cond (not major) ()
         (= major "*") ()
@@ -12,10 +8,14 @@
         (not increm) (list (read-string major) (read-string minor))
         :else (list (read-string major) (read-string minor) (read-string increm))))
 
+;; hairy regx, maybe should do some sanity checking
+;; should verify that not both .* and + are used
+;; only one version terminating .* is allowed
+;; also if there's a qual, neither wildcard is allowed
 
 (defn parse-feature  [fstr]
   (let [[valid ns id major minor increm qual plus]
-        (re-matches #"(?:((?:[a-zA-Z]\w*)(?:[.][a-zA-Z]\w*)*)/)?([a-zA-Z]*)-?(\d+|[*])?(?:\.(\d+|[*]))?(?:\.(\d+|[*]))?-?([^+/.]*)(\+)?"
+        (re-matches #"(?:((?:[a-zA-Z](?:\w|-)*)(?:[.][a-zA-Z](?:\w|-)*)*)/)?([a-zA-Z]*)-?(\d+|[*])?(?:\.(\d+|[*]))?(?:\.(\d+|[*]))?-?([^+/.]*)(\+)?"
                     (str fstr))
         ns (not-empty ns)
         feature (and valid
@@ -26,10 +26,12 @@
       (assoc feature :plus true)
       feature)))
 
-;; converts a string or symbol as necessary to a feature map
-(defn as-feature [featurish]
-  (and featurish
-       (if (map? featurish) featurish (parse-feature (str featurish)))))
+;; converts a string, symbol, or vector as necessary to a feature map
+(defn as-feature [fspec]
+  (cond (nil? fspec) nil
+        (map? fspec) fspec
+        (vector? fspec) (assoc (parse-feature (second fspec)) :id (first fspec))
+        :else (parse-feature (str fspec))))
 
 (defn clj-version []
   {:id 'clojure
@@ -54,15 +56,21 @@
       (reduce #(assoc % (:id %2) %2) features (map parse-feature (str/split features-prop #"\s+")))
       features)))
 
-(def ^:dynamic *features* (init-features))
+(defonce feature-map (atom (init-features)))
 
-;; SEM not sure about this
-(defn update-in-features! [keys val]
-  (alter-var-root #'*features* update-in (if (symbol? keys) (vector keys) keys) (fn [_ new] new) val))
+(defn provide-feature [feature]
+  (swap! feature-map assoc (:id feature) feature)
+  feature)
 
-(defn add-feature! [feature]
-  (let [feature (as-feature feature)]
-    (update-in-features! (:id feature) feature)))
+;; someday provide might be incorporated into the ns macro
+(defmacro provide [feature]
+  ;; always requires a namespaced id, uses *ns* if none provided
+  (let [feature (as-feature feature)
+        fid (:id feature)
+        id (if (not (namespace fid)) (symbol (name (ns-name *ns*)) (name fid)) fid)
+        feature (assoc feature :id id)]
+    `(binding [*ns* *ns*]
+       (provide-feature '~feature))))
 
 (defn feature? [x]
   (and (map? x)
@@ -91,14 +99,12 @@
         (compare-versions (:version actual) (:version request)))))
 
 
-(defn vsym-sat? [vsym]
-  (or (= vsym 'else) (= vsym :else)
-      (let [req (parse-feature (str vsym))
-            id (:id req)
-            actual (get *features* id)]
-        (and actual
-             (version-satisfies? actual req)))))
-
+(defn vsym-provided? [vsym]
+  (let [req (parse-feature (str vsym))
+        id (:id req)
+        actual (get @feature-map id)]
+    (and actual
+         (version-satisfies? actual req))))
 
 ;; not used
 (defn maybe-qualified-class? [sym]
@@ -141,35 +147,34 @@
   (when feature
     (if-let [ns (namespace feature)] feature (symbol (str *ns*) (name feature)))))
 
-(defn vector-sat? [vfeature]
-  (let [[id ver & junk] vfeature]
+(defn vector-provided? [vfspec]
+  (let [[id ver & junk] vfspec]
     (assert (nil? junk))
     (let [req (assoc (parse-feature ver) :id id)
-          actual (get *features* id)]
+          actual (get @feature-map id)]
         (and actual
              (version-satisfies? actual req)))))
-    
 
-(defn feature-sat? [feature]
-  (cond (symbol? feature)  (vsym-sat? feature)
-        (vector? feature)  (vector-sat? feature)
-        :else (let [op (first feature)]
+(defn provided? [fspec]
+  (cond (#{'else :else} fspec) true
+        (symbol? fspec)  (vsym-provided? fspec)
+        (vector? fspec)  (vector-provided? fspec)
+        :else (let [op (first fspec)]
                 (case op
-                  (var var?) (clojure-var? (var-feature (second feature)))
-                  prop= (apply prop= (rest feature))
-                  env= (apply env= (rest feature))
-                  class? (apply java-class? (rest feature))
-                  and (every? feature-sat? (rest feature))
-                  or (some feature-sat? (rest feature))
-                  not (not (feature-sat? (second feature)))))))
+                  (var var?) (clojure-var? (var-feature (second fspec)))
+                  prop= (apply prop= (rest fspec))
+                  env= (apply env= (rest fspec))
+                  class? (apply java-class? (rest fspec))
+                  and (every? provided? (rest fspec))
+                  or (some provided? (rest fspec))
+                  not (not (provided? (second fspec)))))))
 
 
 ;; data-reader
-(defn condf [tests-and-forms]
-  ;; tests-and-forms is sequence of alternating tests and forms.
-  ;; the first testform to succeed returns the next form as the result.
-  ;; Each test is a featuture expression.  Needs more explanation.
-  (let [result (first (keep (fn [[v form]] (when (feature-sat? v) form)) (partition 2 tests-and-forms)))]
+(defn condf [fspecs-and-forms]
+  ;; fspecs-and-forms is sequence of alternating feature specifications and forms.
+  ;; the first feature specification to succeed returns the next form as the result.
+  (let [result (first (keep (fn [[fspec form]] (when (provided? fspec) form)) (partition 2 fspecs-and-forms)))]
     (if (nil? result) '(quote nil) result)))
 
 ;; (quote nil) works around CLJ-1138
