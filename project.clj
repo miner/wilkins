@@ -1,6 +1,6 @@
-(defproject com.velisco/wilkins "0.1.0-SNAPSHOT"
+(defproject com.velisco/wilkins "0.1.0"
   :description "Experimental conditional compilation using tagged literals"
-  :url "http://example.com/FIXME"
+  :url "http://github.com/miner/wilkins"
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
   :dependencies [[org.clojure/clojure "1.4.0"]])
