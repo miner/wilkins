@@ -4,7 +4,7 @@ Experimental lib for Clojure conditional reader using tagged literals
 
 ## Usage
 
-leiningen `[com.velisco/wilkins "0.1.0"]`
+leiningen `[com.velisco/wilkins "0.1.2"]`
 
 ## Example
 
