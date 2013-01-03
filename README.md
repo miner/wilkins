@@ -4,7 +4,7 @@ Experimental lib for Clojure conditional reader using tagged literals
 
 ## Usage
 
-leiningen `[com.velisco/wilkins "0.1.2"]`
+leiningen `[com.velisco/wilkins "0.1.3"]`
 
 ## Example
 
@@ -20,9 +20,9 @@ Then in your source:
 
 User code can provide a feature like this:
 
-    (provide foo.bar/baz1.3)
+    (provide 'foo.bar/baz1.3)
 	
-Notice: no quotes on the arg.  The `provide` macro expects an unquoted literal feature specification.
+The `provide` function will us the current `*ns*` if given an unqualified symbol.
 
 ## Conditional Feature Reader
 
@@ -62,11 +62,10 @@ the keys: `clj`, `clojure`, `jdk` and `java`, plus any features declared by the 
 example, you could use `-Dwilkins.features="x/foo1.2.3 y/bar4.5"` in your Java command line to
 declare feature `x/foo`1.2.3 and `y/bar`4.5.
 
-The `provide` macro provides a
-feature in user code.  The argument is an unquoted feature specification.  If the symbol does not
-have a namespace, the current `*ns*` will be used (essentially, the namespace of the source file.)
-
-
+The `provide` function provides a feature in user code.  If the symbol does not have a namespace,
+the current `*ns*` will be used (essentially, the namespace of the source file.)  A source file should
+not normally provide a feature in another namespace, but it is currently allowed to do so.
+Typically, you'll leave the namespace off and take the default `*ns*`.
 
 
 ## Details

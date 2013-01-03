@@ -58,19 +58,15 @@
 
 (defonce feature-map (atom (init-features)))
 
-(defn provide-feature [feature]
-  (swap! feature-map assoc (:id feature) feature)
-  feature)
-
 ;; someday provide might be incorporated into the ns macro
-(defmacro provide [feature]
+(defn provide [feature]
   ;; always requires a namespaced id, uses *ns* if none provided
   (let [feature (as-feature feature)
         fid (:id feature)
         id (if (not (namespace fid)) (symbol (name (ns-name *ns*)) (name fid)) fid)
         feature (assoc feature :id id)]
-    `(binding [*ns* *ns*]
-       (provide-feature '~feature))))
+    (swap! feature-map assoc (:id feature) feature)
+    feature))
 
 (defn feature? [x]
   (and (map? x)
