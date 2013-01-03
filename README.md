@@ -16,7 +16,7 @@ Then in your source:
 
 	(require 'miner.wilkins)
 	
-    #feature/condf [(and jdk1.6+ clj1.5.*) (require 'clojure.core.reducers)]
+    (println #feature/condf [(and jdk1.6+ clj1.5.*) "Ready for reducers" else "No reducers for you."])
 
 User code can provide a feature like this:
 
