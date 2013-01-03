@@ -1,6 +1,6 @@
 # wilkins
 
-Experimental lib for Clojure conditional reader using tagged literals
+Experimental lib for Clojure conditional feature reader using tagged literals
 
 ## Usage
 
@@ -22,7 +22,7 @@ User code can provide a feature like this:
 
     (provide 'foo.bar/baz1.3)
 	
-The `provide` function will us the current `*ns*` if given an unqualified symbol.
+The `provide` function will use the current `*ns*` if given an unqualified symbol.
 
 ## Conditional Feature Reader
 
