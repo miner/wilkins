@@ -34,21 +34,21 @@ always qualifies.  If no feature requirement is satisfied, the reader effectivel
 technicalilty.)
 
 The feature requirements are evaluated by the `condf` data-reader.  Basically, the feature
-requirement specifies both a feature id and a version.  Feature requirements are evaluated against
+requirement specifies both a feature name and a version.  Feature requirements are evaluated against
 the available features to determine if the requirement is fulfilled.
 
 The compact form of a feature requirement uses a single symbol.  For example, `clj1.4` means Clojure
-1.4.  The alphabetic part is the feature id, and the dotted number part is the version number.  A
+1.4.  The alphabetic part is the feature name, and the dotted number part is the version number.  A
 trailing `+` means "or greater".  A trailing `.*` means "any increment", but the previous parts must
 match exactly.  Only one `+` or `*` is allowed in a feature requirement.  A qualifier string may
 follow the version number, but in that case an exact match is required.  For example, `clj1.5-RC1`
 matches exactly Clojure "1.5-RC1", and not any other version.
 
-Unqualified feature IDs are reserved for Wilkins.  Users may create namespace-qualified IDs
+Unqualified feature names are reserved for Wilkins.  Users may create namespace-qualified names
 following the usual convention for ownership of the namespace.  
 
-A feature requirement can also be a literal vector of ID and version string.  This allows you to use
-a feature ID that contains a digit, such as `[foo.bar/i18n "1.2+"]`.
+A feature requirement can also be a literal vector of a name symbol and a version string.  This allows you to use
+a feature name that contains a digit, such as `[foo.bar/i18n "1.2+"]`.
 
 A var feature requirement simply requires that the named var has been declared.  It is specified
 with #' macro, such as `#'clojure.core/*data-readers*`.  There is no versioning for vars.
@@ -70,13 +70,13 @@ Typically, you'll leave the namespace off and take the default `*ns*`.
 
 ## Details
 
-The atom `feature-map` is a map of feature IDs to features.  Each feature is a map with keys: `:id`
+The atom `feature-map` is a map of feature symbols to features.  Each feature is a map with keys: `:feature`
 (value: symbol), `:version` (value: list of ints), and `:qualifier` (value: a String).  The :version
 is a list of ints corresponding to the version string.  So "1.2.3" is :version (1 2 3).
 
 A feature version requirement is one of:
 * unqualified symbol, for example: `clj1.4`
-* a vector of [id "ver"], for example: `[clj "1.4+"]`
+* a vector of [name "ver"], for example: `[clj "1.4+"]`
 
 A var feature requirement is one of:
 * a #' symbol, for example: `#'foo.bar/baz`

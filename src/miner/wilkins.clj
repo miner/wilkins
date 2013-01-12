@@ -19,7 +19,7 @@
                     (str fstr))
         ns (not-empty ns)
         feature (and valid
-                     {:id (and (not-empty id) (if ns (symbol ns id) (symbol id)))
+                     {:feature (and (not-empty id) (if ns (symbol ns id) (symbol id)))
                       :version (parse-version major minor increm)
                       :qualifier (not-empty qual)})]
     (if (and feature (or (not major) (= plus "+") (= major "*")))
@@ -30,11 +30,11 @@
 (defn as-feature [fspec]
   (cond (nil? fspec) nil
         (map? fspec) fspec
-        (vector? fspec) (assoc (parse-feature (second fspec)) :id (first fspec))
+        (vector? fspec) (assoc (parse-feature (second fspec)) :feature (first fspec))
         :else (parse-feature (str fspec))))
 
 (defn clj-version []
-  {:id 'clojure
+  {:feature 'clojure
    :version (list (:major *clojure-version*)
                   (:minor *clojure-version*)
                   (:incremental *clojure-version*))
@@ -44,7 +44,7 @@
   (let [jdk (parse-feature (System/getProperty "java.version"))
         qual (:qualifier jdk)]
     (assoc jdk
-      :id 'java
+      :feature 'java
       :qualifier (when (and qual (not (.startsWith qual "_"))) qual))))
 
 (defn init-features []
@@ -53,7 +53,7 @@
         features {'clj clj 'clojure clj 'jdk jdk 'java jdk}
         features-prop (System/getProperty "wilkins.features")]
     (if features-prop
-      (reduce #(assoc % (:id %2) %2) features (map parse-feature (str/split features-prop #"\s+")))
+      (reduce #(assoc % (:feature %2) %2) features (map parse-feature (str/split features-prop #"\s+")))
       features)))
 
 (defonce feature-map (atom (init-features)))
@@ -62,15 +62,15 @@
 (defn provide [feature]
   ;; always requires a namespaced id, uses *ns* if none provided
   (let [feature (as-feature feature)
-        fid (:id feature)
+        fid (:feature feature)
         id (if (not (namespace fid)) (symbol (name (ns-name *ns*)) (name fid)) fid)
-        feature (assoc feature :id id)]
-    (swap! feature-map assoc (:id feature) feature)
+        feature (assoc feature :feature id)]
+    (swap! feature-map assoc (:feature feature) feature)
     feature))
 
 (defn feature? [x]
   (and (map? x)
-       (contains? x :id)
+       (contains? x :feature)
        (contains? x :version)))
 
 (defn compare-versions [as bs]
@@ -97,7 +97,7 @@
 
 (defn vsym-provided? [vsym]
   (let [req (parse-feature (str vsym))
-        id (:id req)
+        id (:feature req)
         actual (get @feature-map id)]
     (and actual
          (version-satisfies? actual req))))
@@ -146,7 +146,7 @@
 (defn vector-provided? [vfspec]
   (let [[id ver & junk] vfspec]
     (assert (nil? junk))
-    (let [req (assoc (parse-feature ver) :id id)
+    (let [req (assoc (parse-feature ver) :feature id)
           actual (get @feature-map id)]
         (and actual
              (version-satisfies? actual req)))))
