@@ -87,6 +87,7 @@
             (< a1 b1) -1))))
 
 (defn version-satisfies? [actual request]
+  {:pre [(feature? actual) (feature? request)]}
   ;; args are feature maps
   ;; assumes ids were already matched (might have been equivalent aliases, not identical)
   ;; if request has a qualifier everything must match exactly, otherwise qualifier doesn't matter
@@ -151,6 +152,13 @@
         (and actual
              (version-satisfies? actual req)))))
 
+(defn feature-provided? [request]
+  {:pre [(feature? request)]}
+  (let [actual (get @feature-map (:feature request))]
+    (and actual
+         (version-satisfies? actual request))))
+  
+
 (defn provided? [fspec]
   (cond (#{'else :else} fspec) true
         (symbol? fspec)  (vsym-provided? fspec)
@@ -176,7 +184,37 @@
 ;; (quote nil) works around CLJ-1138
 
 
+
+
+(defmacro almost-feature-cond [& clauses]
+  (when-first [fea clauses]
+    `(if (provided? '~fea) ~(second clauses) (feature-cond ~@(nnext clauses)))))
+
+
+(declare provided-test)
+
+(defmacro provided-conjunction 
+  ([con] `(~con))
+  ([con fspec] `(provided-test ~fspec))
+  ([con fspec & more] `(~con (provided-test ~fspec) (provided-test (~con ~@more)))))
+
+(defmacro provided-test [fspec]
+  (cond (nil? fspec) true
+        (#{'else :else} fspec) true
+        (symbol? fspec)  `(feature-provided? '~(as-feature fspec))
+        (vector? fspec)  `(feature-provided? '~(as-feature fspec))
+        :else (let [op (first fspec)]
+                (case op
+                  (var var?) `(clojure-var? '~(var-feature (second fspec)))
+                  prop= `(prop= ~@(rest fspec))
+                  env= `(env= ~@(rest fspec))
+                  class? `(java-class? ~@(rest fspec))
+                  (and clojure.core/and) `(provided-conjunction and ~@(next fspec))
+                  (or clojure.core/or) `(provided-conjunction or ~@(next fspec))
+                  (not clojure.core/not) `(not (provided-test ~(second fspec)))))))
+  
 ;; for use at runtime as opposed to readtime
 (defmacro feature-cond [& clauses]
-  ;; TBD
-  nil)
+  (when-first [fspec clauses]
+    `(if (provided-test ~fspec) ~(second clauses) (feature-cond ~@(nnext clauses)))))
+

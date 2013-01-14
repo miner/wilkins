@@ -36,3 +36,18 @@
   (is (= 42 (read-string "#x/condf [foo3.0+ :no-ns miner.wilkins-test/foo3.2+ :wilkins
 miner.provide-sample/foo3.2+ 42 user/foo3.4.5 :user else :bad]")))
   (is (= 42 (read-string "#x/condf [xyz/foo4.2+ :bad zzz/bar20.* 42 else :bad]"))))
+
+(deftest runtime
+  (let [n 10]
+    (is (= (feature-cond (and clj (not foobar) zzz/bar1.2+) (inc n)
+                         (or clj1.5 [clj "1.4"]) :clj
+                         else :bad)
+           11))
+    (is (= (feature-cond (and clj foobar zzz/bar3.2+) (throw (IllegalStateException. "Bad"))
+                         (or clj1.5 [clj "1.4"]) (dec (* n n))
+                         else :bad) 
+           99))
+    (is (= (feature-cond (and clj (not foobar3.2) bar31.2+) :bad 
+                         (or jdk2.0 [clj "1.9+"]) :clj-future
+                         else (+ 3 4 n))
+           17))))
