@@ -1,7 +1,7 @@
 (ns miner.wilkins
   (:require [clojure.string :as str]))
 
-(defn parse-version [major minor increm]
+(defn version-list [major minor increm]
   (cond (not major) ()
         (= major "*") ()
         (not minor) (list (read-string major))
@@ -20,7 +20,7 @@
         ns (not-empty ns)
         feature (and valid
                      {:feature (and (not-empty id) (if ns (symbol ns id) (symbol id)))
-                      :version (parse-version major minor increm)
+                      :version (version-list major minor increm)
                       :qualifier (not-empty qual)})]
     (if (and feature (or (not major) (= plus "+") (= major "*")))
       (assoc feature :plus true)
@@ -184,23 +184,17 @@
 ;; (quote nil) works around CLJ-1138
 
 
-
-
-(defmacro almost-feature-cond [& clauses]
-  (when-first [fea clauses]
-    `(if (provided? '~fea) ~(second clauses) (feature-cond ~@(nnext clauses)))))
-
-
 (declare provided-test)
 
-(defmacro provided-conjunction 
+(defmacro conjunctive-provided
   ([con] `(~con))
   ([con fspec] `(provided-test ~fspec))
   ([con fspec & more] `(~con (provided-test ~fspec) (provided-test (~con ~@more)))))
 
 (defmacro provided-test [fspec]
-  (cond (nil? fspec) true
+  (cond (nil? fspec) false
         (#{'else :else} fspec) true
+        (map? fspec) `(feature-provided? '~fspec)
         (symbol? fspec)  `(feature-provided? '~(as-feature fspec))
         (vector? fspec)  `(feature-provided? '~(as-feature fspec))
         :else (let [op (first fspec)]
@@ -209,12 +203,14 @@
                   prop= `(prop= ~@(rest fspec))
                   env= `(env= ~@(rest fspec))
                   class? `(java-class? ~@(rest fspec))
-                  (and clojure.core/and) `(provided-conjunction and ~@(next fspec))
-                  (or clojure.core/or) `(provided-conjunction or ~@(next fspec))
+                  (and clojure.core/and) `(conjunctive-provided and ~@(next fspec))
+                  (or clojure.core/or) `(conjunctive-provided or ~@(next fspec))
                   (not clojure.core/not) `(not (provided-test ~(second fspec)))))))
   
 ;; for use at runtime as opposed to readtime
-(defmacro feature-cond [& clauses]
-  (when-first [fspec clauses]
-    `(if (provided-test ~fspec) ~(second clauses) (feature-cond ~@(nnext clauses)))))
+
+(defmacro feature-cond 
+  ([] nil)
+  ([fspec form] `(if (provided-test ~fspec) ~form nil))
+  ([fspec form & more] `(if (provided-test ~fspec) ~form (feature-cond ~@more))))
 
