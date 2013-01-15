@@ -6,6 +6,11 @@ Experimental lib for Clojure conditional feature reader using tagged literals
 
 leiningen `[com.velisco/wilkins "0.1.4"]`
 
+I might forget to update the version number here in the README.  The latest version is available on
+Clojars.org:
+
+https://clojars.org/com.velisco/wilkins
+
 ## Example
 
 In your `data_readers.clj` you can assign a tag to enable the conditional reader like this:
