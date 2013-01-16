@@ -1,6 +1,27 @@
 (ns miner.wilkins
   (:require [clojure.string :as str]))
 
+
+(defn current-ns-str []
+  (name (ns-name *ns*)))
+
+(defn namespace? [ns]
+  (instance? clojure.lang.Namespace ns))
+
+;; ns can be a real namespace, a string or a symbol
+;; sym can be a symbol or a string
+;; when the namespace is not specified, the current *ns* is used
+;; result is always a qualified symbol
+(defn qualified-symbol 
+  ([sym] (cond (nil? sym) nil
+               (string? sym) (symbol (current-ns-str) sym)
+               (namespace sym) sym
+               :else (symbol (current-ns-str) (name sym))))
+  ([ns sym] (cond (nil? sym) nil
+                  (nil? ns) (qualified-symbol sym)
+                  (namespace? ns) (symbol (name (ns-name ns)) (name sym))
+                  :else (symbol (name ns) (name sym)))))
+
 (defn version-list [major minor increm]
   (cond (not major) ()
         (= major "*") ()
@@ -60,10 +81,9 @@
 
 ;; someday provide might be incorporated into the ns macro
 (defn provide [feature]
-  ;; always requires a namespaced id, uses *ns* if none provided
+  ;; always requires a namespaced id, uses *ns* if none specified
   (let [feature (as-feature feature)
-        fid (:feature feature)
-        id (if (not (namespace fid)) (symbol (name (ns-name *ns*)) (name fid)) fid)
+        id (qualified-symbol (:feature feature))
         feature (assoc feature :feature id)]
     (swap! feature-map assoc (:feature feature) feature)
     feature))
@@ -132,17 +152,13 @@
          (every? env= (partition 2 more)))))
 
 ;; maybe could force require, but seems wrong
-(defn clojure-var? [sym]
+(defn defined? [sym]
   ;; sym should have a namespace
   (when-let [nsname (namespace sym)]
     (when-let [ns (find-ns (symbol nsname))]
       (try
         (ns-resolve ns sym)
         (catch java.io.FileNotFoundException _ nil)))))
-
-(defn var-feature [feature]
-  (when feature
-    (if-let [ns (namespace feature)] feature (symbol (str *ns*) (name feature)))))
 
 (defn vector-provided? [vfspec]
   (let [[id ver & junk] vfspec]
@@ -165,7 +181,7 @@
         (vector? fspec)  (vector-provided? fspec)
         :else (let [op (first fspec)]
                 (case op
-                  (var var?) (clojure-var? (var-feature (second fspec)))
+                  (quote deref clojure.core/deref var var?) (defined? (qualified-symbol (second fspec)))
                   prop= (apply prop= (rest fspec))
                   env= (apply env= (rest fspec))
                   class? (apply java-class? (rest fspec))
@@ -199,7 +215,7 @@
         (vector? fspec)  `(feature-provided? '~(as-feature fspec))
         :else (let [op (first fspec)]
                 (case op
-                  (var var?) `(clojure-var? '~(var-feature (second fspec)))
+                  (quote deref clojure.core/deref var var?) `(defined? '~(qualified-symbol (second fspec)))
                   prop= `(prop= ~@(rest fspec))
                   env= `(env= ~@(rest fspec))
                   class? `(java-class? ~@(rest fspec))
