@@ -4,7 +4,7 @@ Experimental lib for Clojure conditional feature reader using tagged literals
 
 ## Usage
 
-leiningen `[com.velisco/wilkins "0.1.4"]`
+leiningen `[com.velisco/wilkins "0.1.5"]`
 
 I might forget to update the version number here in the README.  The latest version is available on
 Clojars.org:
