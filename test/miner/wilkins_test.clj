@@ -16,6 +16,8 @@
                  (and clj1.4+ jdk1.5+) :ok]
        :fail))
 
+(defrecord MyReco [x])
+
 (deftest running-on-clr
   (let [{:keys [major minor]} *clojure-version*]
     (is (= (clj14?) (or (> major 1) (and (== major 1) (>= minor 4)))))))
@@ -31,7 +33,12 @@
   (is (= #x/condf [@miner.wilkins/provide :ok] :ok))
   (is (= #x/condf [@miner.wilkins/not-there :bad @miner.wilkins/condf :ok] :ok))
   (is (= #x/condf [@miner.wilkins/not-there :bad @miner.wilkins/condf :ok] :ok))
-  (is (nil? #x/condf [@miner.wilkins/not-there :bad])))
+  (is (= #x/condf [@java.lang.Long :ok] :ok))
+  ;; note the name-munging (- to _) on the record name as a Java class
+  (is (= #x/condf [@miner.wilkins_test.MyReco :ok] :ok))
+  (is (= #x/condf [@MyReco :ok] :ok))
+  (is (= #x/condf [@UndefindedRecord :bad else :ok] :ok))
+  (is (nil? #x/condf [@not.there :bad])))
 
 (deftest provide-test
   (is (= 42 (read-string "#x/condf [foo3.0+ :no-ns miner.wilkins-test/foo3.2+ :wilkins
