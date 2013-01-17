@@ -56,8 +56,9 @@ following the usual convention for ownership of the namespace.
 A feature requirement can also be a literal vector of a name symbol and a version string.  This allows you to use
 a feature name that contains a digit, such as `[foo.bar/i18n "1.2+"]`.
 
-A var feature requirement simply requires that the named var has been declared.  It is specified
-with #' macro, such as `#'clojure.core/*data-readers*`.  There is no versioning for vars.
+A def requirement simply requires that the name symbol has been declared (it could be a var, class,
+record type, etc.)  It is specified with `@` prefix, such as `@clojure.core/*data-readers*`.  There
+is no versioning for def requirements.
 
 Boolean combinations use list expressions beginning with `and`, `or` or `not`.  For example: `(and
 jdk1.6+ clj1.5+)`.
@@ -87,9 +88,9 @@ A feature version requirement is one of:
 * unqualified symbol, for example: `clj1.4`
 * a vector of [name "ver"], for example: `[clj "1.4+"]`
 
-A var feature requirement is one of:
-* a #' symbol, for example: `#'foo.bar/baz`
-* a list starting with `var`, for example: `(var foo.bar/baz)`
+A def requirement is one of:
+* @symbol, for example: `@foo.bar/baz`
+* a list starting with `deref`, for example: `(deref foo.bar/baz)`
 
 A boolean feature requirement is
 * a list starting with `and`, `or`, or `not` combining other feature requirements

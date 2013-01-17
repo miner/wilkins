@@ -123,42 +123,19 @@
     (and actual
          (version-satisfies? actual req))))
 
-;; not used
-(defn maybe-qualified-class? [sym]
-  ;; Check for java class, must be fully qualified
-  (and (re-matches #"([\p{L}_$][\p{L}\p{N}_$]*\.)+[\p{L}_$][\p{L}\p{N}_$]*" (str sym))
-       true))
-
-(defn java-class?
-  ([sym]
-     (when (maybe-qualified-class? sym)
-       (try
-         (resolve sym)
-         (catch ClassNotFoundException _ nil))))
-  ([sym & more]
-     (and (java-class? sym)
-          (every? java-class? more))))
-
-(defn prop= 
- ([prop val] (= (System/getProperty (str prop)) (str val)))
- ([prop val & more]
-    (and (prop= prop val)
-         (every? prop= (partition 2 more)))))
-
-(defn env= 
- ([evar val] (= (System/getenv (str evar)) (str val)))
- ([evar val & more]
-    (and (env= evar val)
-         (every? env= (partition 2 more)))))
 
 ;; maybe could force require, but seems wrong
 (defn defined? [sym]
   ;; sym should have a namespace
-  (when-let [nsname (namespace sym)]
+  (if-let [nsname (namespace sym)]
     (when-let [ns (find-ns (symbol nsname))]
       (try
         (ns-resolve ns sym)
-        (catch java.io.FileNotFoundException _ nil)))))
+        (catch java.io.FileNotFoundException _ nil)))
+    (try 
+      ;; might be a java class or record
+      (resolve sym)
+      (catch ClassNotFoundException _ nil))))
 
 (defn vector-provided? [vfspec]
   (let [[id ver & junk] vfspec]
@@ -181,10 +158,7 @@
         (vector? fspec)  (vector-provided? fspec)
         :else (let [op (first fspec)]
                 (case op
-                  (quote deref clojure.core/deref var var?) (defined? (qualified-symbol (second fspec)))
-                  prop= (apply prop= (rest fspec))
-                  env= (apply env= (rest fspec))
-                  class? (apply java-class? (rest fspec))
+                  (deref clojure.core/deref var) (defined? (second fspec))
                   and (every? provided? (rest fspec))
                   or (some provided? (rest fspec))
                   not (not (provided? (second fspec)))))))
@@ -215,10 +189,7 @@
         (vector? fspec)  `(feature-provided? '~(as-feature fspec))
         :else (let [op (first fspec)]
                 (case op
-                  (quote deref clojure.core/deref var var?) `(defined? '~(qualified-symbol (second fspec)))
-                  prop= `(prop= ~@(rest fspec))
-                  env= `(env= ~@(rest fspec))
-                  class? `(java-class? ~@(rest fspec))
+                  (deref clojure.core/deref var) `(defined? '~(second fspec))
                   (and clojure.core/and) `(conjunctive-provided and ~@(next fspec))
                   (or clojure.core/or) `(conjunctive-provided or ~@(next fspec))
                   (not clojure.core/not) `(not (provided-test ~(second fspec)))))))

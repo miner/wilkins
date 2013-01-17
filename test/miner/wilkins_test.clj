@@ -27,12 +27,11 @@
 (deftest foo-test
   (is (= (foo42) 42)))
 
-(deftest var-test
-  (is (= #x/condf [#'miner.wilkins/provide :ok] :ok))
-  (is (= #x/condf [#'miner.wilkins/not-there :bad #'miner.wilkins/condf :ok] :ok))
-  (is (= #x/condf ['miner.wilkins/not-there :bad 'miner.wilkins/condf :ok] :ok))
+(deftest defined-test
+  (is (= #x/condf [@miner.wilkins/provide :ok] :ok))
   (is (= #x/condf [@miner.wilkins/not-there :bad @miner.wilkins/condf :ok] :ok))
-  (is (nil? #x/condf [#'miner.wilkins/not-there :bad])))
+  (is (= #x/condf [@miner.wilkins/not-there :bad @miner.wilkins/condf :ok] :ok))
+  (is (nil? #x/condf [@miner.wilkins/not-there :bad])))
 
 (deftest provide-test
   (is (= 42 (read-string "#x/condf [foo3.0+ :no-ns miner.wilkins-test/foo3.2+ :wilkins
