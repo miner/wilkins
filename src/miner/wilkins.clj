@@ -116,6 +116,8 @@
 (defmacro version [vspec]
   `'~(as-version vspec))
 
+(defmacro request [rspec]
+  `'~(as-request rspec))
 
 ;; for now, there aren't many requirements
 (def feature? map?)
