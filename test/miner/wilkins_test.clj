@@ -94,3 +94,6 @@ miner.wilkins-test/Foo-50+ :wrong-version miner.wilkins-test/Foo-3.2+ 42 else :b
                          (or jdk-2.0 [clj "1.9+"]) :clj-future
                          else (+ 3 4 n))
            17))))
+
+(deftest current-ns
+  (println "*ns* = " *ns*))
