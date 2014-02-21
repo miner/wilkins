@@ -1,7 +1,12 @@
 (ns miner.provide-sample
   (:use miner.wilkins))
 
-(provide '[foo "3.4.5"])
-(provide 'zzz/bar20.34)
+;; features used in tests
+
+(def Foo (version "3.4.5"))
+
+(def Bar (version "20.34"))
+
+
 
 

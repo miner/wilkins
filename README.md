@@ -4,12 +4,17 @@ Experimental lib for Clojure conditional feature reader using tagged literals
 
 ## Usage
 
-leiningen `[com.velisco/wilkins "0.1.5"]`
+leiningen `[com.velisco/wilkins "0.2.0"]`
 
-I might forget to update the version number here in the README.  The latest version is available on
+In case I forget to update the version number here in the README, the latest version is available on
 Clojars.org:
 
-https://clojars.org/com.velisco/wilkins
+[![Wilkins on clojars.org][latest]][clojar]
+
+[latest]: https://clojars.org/com.velisco/wilkins/latest-version.svg "Wilkins on clojars.org"
+[clojar]: https://clojars.org/com.velisco/wilkins
+
+
 
 ## Example
 
@@ -25,9 +30,9 @@ Then in your source:
 
 User code can provide a feature like this:
 
-    (provide 'foo.bar/baz1.3)
+    (provide 'MyFeature1.3)
 	
-The `provide` function will use the current namespace `*ns*` if given an unqualified symbol.
+The `provide` function declares a feature.
 
 ## Conditional Feature Reader
 
@@ -48,13 +53,14 @@ The compact form of a feature requirement uses a single symbol.  For example, `c
 trailing `+` means "or greater".  A trailing `.*` means "any increment", but the previous parts must
 match exactly.  Only one `+` or `*` is allowed in a feature requirement.  A qualifier string may
 follow the version number, but in that case an exact match is required.  For example, `clj1.5-RC1`
-matches exactly Clojure "1.5-RC1", and not any other version.
+matches exactly Clojure "1.5-RC1", and not any other version.  In the compact form, an optional hyphen may
+separate the feature name from the version.  `clj-1.5` is the same as `clj1.5`.
 
-Unqualified feature names are reserved for Wilkins.  Users may create namespace-qualified names
-following the usual convention for ownership of the namespace.  
+Unqualified feature names beginning with a lowercase letter are reserved for Wilkins to define.  Users
+may create feature names beginning with a Capital letter.
 
 A feature requirement can also be a literal vector of a name symbol and a version string.  This allows you to use
-a feature name that contains a digit, such as `[foo.bar/i18n "1.2+"]`.
+a feature name that contains a digit, such as `[lucky7 "1.2+"]`.
 
 A def requirement simply requires that the name symbol has been declared (it could be a var, class,
 record type, etc.)  It is specified with `@` prefix, such as `@clojure.core/*data-readers*`.  There
