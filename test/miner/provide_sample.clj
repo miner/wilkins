@@ -3,10 +3,7 @@
 
 ;; features used in tests
 
-(def Foo (version "3.4.5"))
+(def ^{:feature (version "3.4.5")} Foo)
 
-(def Bar (version "20.34"))
-
-
-
+(def ^{:feature (version "20.34")} Bar)
 

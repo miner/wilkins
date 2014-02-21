@@ -83,11 +83,11 @@
     (assoc java-feature :feature 'miner.wilkins/java :version jdk-version)))
 
 
-(def clojure (assoc *clojure-version* :feature 'miner.wilkins/clojure :version (clojure-version)))
-(def clj clojure)
-(def java (feature-java))
-(def jdk java)
+(def ^{:feature (assoc *clojure-version* :version (clojure-version))} clojure)
+(def ^{:feature (:feature (meta #'clojure))} clj)
 
+(def ^{:feature (feature-java)} java)
+(def ^{:feature (:feature (meta #'java))} jdk)
 
 ;; macro to make it easy to create a literal feature map
 (defmacro feature [fspec]
@@ -130,7 +130,7 @@
 
 (defn request-satisfied? [req]
   (let [vsym (when-let [id (:feature req)] (resolve id))
-        actual (and vsym (deref vsym))]
+        actual (and vsym (:feature (meta vsym)))]
     (and actual (feature? actual)
          (version-satisfies? actual req))))
 
