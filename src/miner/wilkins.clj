@@ -4,36 +4,16 @@
   (:require [clojure.string :as str]))
 
 
-(defn current-ns-str []
-  (name (ns-name *ns*)))
-
-(defn namespace? [ns]
-  (instance? clojure.lang.Namespace ns))
-
-;; ns can be a real namespace, a string or a symbol
-;; sym can be a symbol or a string
-;; when the namespace is not specified, the current *ns* is used
-;; result is always a qualified symbol
-(defn qualified-symbol 
-  ([sym] (cond (nil? sym) nil
-               (string? sym) (symbol (current-ns-str) sym)
-               (namespace sym) sym
-               :else (symbol (current-ns-str) (name sym))))
-  ([ns sym] (cond (nil? sym) nil
-                  (nil? ns) (qualified-symbol sym)
-                  (namespace? ns) (symbol (name (ns-name ns)) (name sym))
-                  :else (symbol (name ns) (name sym)))))
+(defn parse-long [s]
+  (cond (nil? s) nil
+        (= s "*") :*
+        :else (Long/parseLong s)))
 
 ;; hairy regx, maybe should do some sanity checking
 ;; should verify that not both .* and + are used
 ;; only one version terminating .* is allowed
 ;; also if there's a qual, neither wildcard is allowed (currently is allowed)
 ;; hyphen is allowed before version number
-
-(defn parse-long [s]
-  (cond (nil? s) nil
-        (= s "*") :*
-        :else (Long/parseLong s)))
 
 (defn parse-feature  [fstr]
   (let [[head tail] (str/split fstr #"/" 2)
