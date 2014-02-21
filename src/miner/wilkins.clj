@@ -35,27 +35,6 @@
         (= s "*") :*
         :else (Long/parseLong s)))
 
-
-(defn SAVE-parse-feature  [fstr]
-  (let [[head tail] (str/split fstr #"/" 2)
-        ns (if tail head "miner.wilkins")
-        sym (or tail head)
-        [valid id major minor increm qual plus] 
-          (re-matches #"(?:(\D+)-)(\d+|[*])(?:\.(\d+|[*]))?(?:\.(\d+|[*]))?-?([^+/.]*)(\+)?" sym)
-        ns (not-empty ns)
-        id (not-empty id)
-        feature (if (and valid id)
-                     {:feature (if ns (symbol ns id) (symbol id))
-                      :major (parse-long major)
-                      :minor (parse-long minor)
-                      :incremental (parse-long increm)
-                      :qualifier (not-empty qual)}
-                     {:feature (if ns (symbol ns sym) (symbol sym))} )]
-    (if (and id feature (or (not major) (= plus "+") (= major "*")))
-      (assoc feature :plus true)
-      feature)))
-
-
 (defn parse-feature  [fstr]
   (let [[head tail] (str/split fstr #"/" 2)
         ns (if tail head "miner.wilkins")
@@ -87,7 +66,6 @@
       (assoc version :plus true)
       version)))
 
-
 ;; converts a string, symbol, or vector as necessary to a feature map
 (defn as-feature [fspec]
   (cond (nil? fspec) nil
@@ -101,10 +79,13 @@
 
 (defn as-request [rspec]
   (let [feat (as-feature rspec)]
-    (cond (not (:major feat)) (assoc feat :major :*)
-          (not (:minor feat)) (assoc feat :minor :*)
-          (not (:incremental feat)) (assoc feat :incremental :*)
-          :else feat)))
+    (if-not (:major feat)
+      (assoc feat :major :*)
+      feat))) 
+
+(defn parse-request [rstr]
+  (let [feat (parse-feature rstr)]
+    (as-request feat)))
 
 (defn as-version [vspec]
   (cond (nil? vspec) {:plus true :major :*}
@@ -165,12 +146,15 @@
         (compare-versions actual request))))
 
 
-(defn feature-request-satisfied? [request]
-  (let [req (as-request request)
-        vsym (when-let [id (:feature req)] (resolve id))
+(defn request-satisfied? [req]
+  (let [vsym (when-let [id (:feature req)] (resolve id))
         actual (and vsym (deref vsym))]
     (and actual (feature? actual)
          (version-satisfies? actual req))))
+
+(defn feature-request-satisfied? [request]
+  (request-satisfied? (as-request request)))
+
 
 ;; hacky stuff that doesn't exactly work.  Trying to handle alias ns resolution
 ;; (defn fully-qualified-namespace [sym]
@@ -231,12 +215,12 @@
         (special-symbol? request) true
         (class-symbol? request) true
         (symbol? request)  `(or (soft-resolve '~request) 
-                                (feature-request-satisfied? '~(as-feature request)))
-        (vector? request)  `(feature-request-satisfied? '~(as-feature request))
-        (string? request)  `(feature-request-satisfied? '~(as-feature request))
+                                (request-satisfied? '~(as-request request)))
+        (vector? request)  `(request-satisfied? '~(as-request request))
+        (string? request)  `(request-satisfied? '~(as-request request))
         (seq? request) (let [op (first request)]
                          (case op
-                           quote `(feature-request-satisfied? '~(as-feature request))
+                           quote `(request-satisfied? '~(as-request request))
                            and `(conjunctive-satisfaction and ~@(next request))
                            or `(conjunctive-satisfaction or ~@(next request))
                            not `(not (satisfaction-test ~(second request)))))
