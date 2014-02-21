@@ -1,9 +1,13 @@
 (ns miner.wilkins-test
-  (:require [miner.provide-sample :as ps])
   (:use clojure.test
         miner.wilkins))
 
-;; provide-sample.clj defines some features used in these tests
+;; defines some features used in these tests
+
+(def ^{:feature (version "3.4.5")} Foo)
+
+(def ^{:feature (version "20.34")} Bar)
+
 
 (defn clj14+? []
   #x/condf [clr false [clj "1.4+"] true else false])
@@ -61,22 +65,22 @@
 
 (deftest provide-test
   (is (= 42 (read-string "#x/condf [foo-3.0+ :wrong-case miner.wilkins-test/foo :bad-var
-miner.provide-sample/Foo-50+ :wrong-version miner.provide-sample/Foo-3.2+ 42 else :bad]")))
-  (is (= 42 (read-string "#x/condf [Foo-4.2+ :missing-ns miner.provide-sample/Bar-20.* 42 else :bad]"))))
+miner.wilkins-test/Foo-50+ :wrong-version miner.wilkins-test/Foo-3.2+ 42 else :bad]")))
+  (is (= 42 (read-string "#x/condf [Foo-4.2+ :missing-ns miner.wilkins-test/Bar-20.* 42 else :bad]"))))
 
 ;; ISSUE: can't handle ps/Foo because macros doesn't resolve local ns alias
 
 (deftest runtime
   (let [n 10]
-    (is (= (feature-cond (and clj (not foobar) miner.provide-sample/Bar-1.2+) (inc n)
+    (is (= (feature-cond (and clj (not foobar) miner.wilkins-test/Bar-1.2+) (inc n)
                          (or clj-1.5 [clj "1.4"]) :clj
                          else :bad)
            11))
-    (is (= (feature-cond (and clj Foobar miner.provide-sample/Bar-3.2+) (throw (IllegalStateException. "Bad"))
+    (is (= (feature-cond (and clj Foobar miner.wilkins-test/Bar-3.2+) (throw (IllegalStateException. "Bad"))
                          (or clj-1.5+ [clj "1.4"]) (dec (* n n))
                          else :bad) 
            99))
-    (is (= (feature-cond (and clj (not Foobar3.2) miner.provide-sample/Bar-31.2+) :bad 
+    (is (= (feature-cond (and clj (not Foobar3.2) miner.wilkins-test/Bar-31.2+) :bad 
                          (or jdk-2.0 [clj "1.9+"]) :clj-future
                          else (+ 3 4 n))
            17))))
