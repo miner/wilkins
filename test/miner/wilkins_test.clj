@@ -40,9 +40,10 @@
   (is (= (foo42) 42)))
 
 (defn clean-map [mp]
-  (reduce-kv (fn [m k v] (if v (assoc m k v) m)) {} mp))
+  ;; clean out nil values for more compact maps
+  (reduce-kv (fn [m k v] (if-not v (dissoc m k) m)) mp mp))
 
-(deftest parsing
+(deftest parsing-features
   (are [x y] (= (clean-map (parse-feature x)) y)
        "foo-bar-1" {:feature 'miner.wilkins/foo-bar, :major 1}
        "foo-bar1" {:feature 'miner.wilkins/foo-bar1}
@@ -51,6 +52,15 @@
                                    :incremental :*}
        "bar/foo.bar" {:feature 'bar/foo.bar}))      
 
+(deftest parsing-requests
+  ;; slightly different from parse-feature for the case where no version is specified
+  (are [x y] (= (clean-map (parse-request x)) y)
+       "foo-bar-1" {:feature 'miner.wilkins/foo-bar, :major 1}
+       "foo-bar1" {:feature 'miner.wilkins/foo-bar1 :major :*}
+       "foo-bar-1.2+" {:plus true, :feature 'miner.wilkins/foo-bar, :major 1, :minor 2}
+       "baz.quux/foo-bar-3.4.*"   {:feature 'baz.quux/foo-bar, :major 3, :minor 4,
+                                   :incremental :*}
+       "bar/foo.bar" {:feature 'bar/foo.bar :major :*}))
 
 (deftest defined-test
   (is (= #x/condf [miner.wilkins/clojure :ok] :ok))
