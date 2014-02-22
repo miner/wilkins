@@ -130,7 +130,8 @@
 
 (defn request-satisfied? [req]
   (let [vsym (when-let [id (:feature req)] (resolve id))
-        actual (and vsym (:feature (meta vsym)))]
+        feat (and vsym (:feature (meta vsym)))
+        actual (if (true? feat) {} feat)]
     (and actual (feature? actual)
          (version-satisfies? actual req))))
 
