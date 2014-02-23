@@ -26,13 +26,10 @@ Then in your source:
 
 	(require 'miner.wilkins)
 	
-    (println #feature/condf [(and jdk1.6+ clj1.5.*) "Ready for reducers" else "No reducers for you."])
+    (println #feature/condf [(and jdk-1.6+ clj-1.5.*) "Ready for reducers" else "No reducers for you."])
 
-User code can provide a feature like this:
-
-    (provide 'MyFeature1.3)
-	
-The `provide` function declares a feature.
+Note that all the clause are contained in a vector literal so the data reader applies to the
+whole vector as its single argument.
 
 ## Conditional Feature Reader
 
@@ -43,24 +40,41 @@ satisfied causes the reader to return the following expression.  As a special ca
 nil.  (Actually, it returns '(quote nil) in order to work around CLJ-1138, but that's a minor
 technicalilty.)
 
-The feature requirement specifies a feature name and an optional version.  Feature requirements are
-evaluated against the available features to determine if the requirement is fulfilled.  The feature
+The feature requirement specifies a feature name and an optional version.  The feature
 requirements are evaluated by the `condf` data-reader at read-time so the compiler never sees
 unsuccessful clauses.
 
-The compact form of a feature requirement uses a single symbol.  For example, `clj1.4` means Clojure
-1.4.  The alphabetic part is the feature name, and the dotted number part is the version number.  A
-trailing `+` means "or greater".  A trailing `.*` means "any increment", but the previous parts must
-match exactly.  Only one `+` or `*` is allowed in a feature requirement.  A qualifier string may
-follow the version number, but in that case an exact match is required.  For example, `clj1.5-RC1`
-matches exactly Clojure "1.5-RC1", and not any other version.  In the compact form, an optional hyphen may
-separate the feature name from the version.  `clj-1.5` is the same as `clj1.5`.
-
-Unqualified feature names beginning with a lowercase letter are reserved for Wilkins to define.  Users
-may create feature names beginning with a Capital letter.
+The compact form of a feature requirement uses a single symbol.  For example, `clj-1.4`
+means Clojure 1.4.  The alphabetic part is the feature name, and the dotted number part is
+the version number, separated by a hyphen (-).  A trailing `+` means "or greater".  A
+trailing `.*` means "any increment", but the previous parts must match exactly.  Only one
+`+` or `*` is allowed in a feature requirement.  A qualifier string may follow the version
+number (separated by a hyphen), but in that case an exact match is required.  For example,
+`clj-1.5-RC1` matches exactly Clojure "1.5.0-RC1", and not any other version.  A hyphen is
+required to  separate the feature name from version, but the version information is
+optional.  Also, hyphens may be used in the feature name as well.  However, if the feature
+name contains a hyphen followed by digit, the parser will be confused.  In that case, you
+can either quote the symbol or use the vector form of the feature requirement.
 
 A feature requirement can also be a literal vector of a name symbol and a version string.  This allows you to use
 a feature name that contains a digit, such as `[lucky7 "1.2+"]`.
+
+A feature declaration is simply a Clojure var with metadata declared for the `:feature`
+key.  
+
+    (require '[miner.wilkins :as w])
+    (def ^{:feature (w/version "1.2.3")} foo 42)
+
+The `version` macro expands a version string into a map form, similar to the style of
+`*clojure-version*`, with the keys `:major`, `:minor`, `:incremental` and `:qualifier`.  An
+map-entry may be omitted if the value is nil.
+
+A feature requirement without a namespace implicitly referes to the `miner.wilkins`
+namespace.  For example, `miner.wilkins/clj` is a var with metadata defining the current
+Clojure version (taken from `*clojure-version*`).  `clojure` is a synonym for `clj`.  The
+vars `java` and `jdk` have the version of the JDK.
+
+
 
 A def requirement simply requires that the name symbol has been declared (it could be a var, class,
 record type, etc.)  It is specified with `@` prefix, such as `@clojure.core/*data-readers*`.  There

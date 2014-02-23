@@ -50,7 +50,9 @@
 (defn as-feature [fspec]
   (cond (nil? fspec) nil
         (map? fspec) fspec
-        (vector? fspec) (assoc (parse-version (second fspec)) :feature (first fspec))
+        (vector? fspec) (if (second fspec)
+                          (assoc (parse-version (second fspec)) :feature (first fspec))
+                          {:feature (first fspec)})
         (and (seq? fspec) (= (first fspec) 'quote)) {:feature (second fspec)}
         (string? fspec) (parse-feature fspec)
         (symbol? fspec) (parse-feature (str fspec))
@@ -80,8 +82,7 @@
 (defn feature-java []
   (let [jdk-version (System/getProperty "java.version")
         java-feature (parse-version (first (str/split jdk-version #"_")))]
-    (assoc java-feature :feature 'miner.wilkins/java :version jdk-version)))
-
+    (assoc java-feature :version jdk-version)))
 
 (def ^{:feature (assoc *clojure-version* :version (clojure-version))} clojure)
 (def ^{:feature (:feature (meta #'clojure))} clj)
@@ -127,13 +128,13 @@
        ((if (and (:plus request) (not (:qualifier request))) (complement neg?) zero?)
         (compare-versions actual request))))
 
-
 (defn request-satisfied? [req]
-  (let [vsym (when-let [id (:feature req)] (resolve id))
-        feat (and vsym (:feature (meta vsym)))
-        actual (if (true? feat) {} feat)]
-    (and actual (feature? actual)
-         (version-satisfies? actual req))))
+  (when-let [id (:feature req)]
+    (when-let [vsym (resolve id)]
+      (let [feat (:feature (meta vsym))
+            actual (if (or (nil? feat) (true? feat)) {} feat)]
+        (when (feature? actual)
+          (version-satisfies? actual req))))))
 
 (defn feature-request-satisfied? [request]
   (request-satisfied? (as-request request)))
@@ -217,3 +218,19 @@
   ([fspec form] `(if (satisfaction-test ~fspec) ~form nil))
   ([fspec form & more] `(if (satisfaction-test ~fspec) ~form (feature-cond ~@more))))
 
+
+(defn ns-features [namespace]
+  "Returns a map of the features declare in the namespace.  The keys are fully qualified
+  symbols (naming vars with metadata for the key :feature), and the values are maps of
+  feature information, typically with keys such as :major, :minor, and :incremental.
+  However, the feature information might be an empty map if the var was simply marked as a
+  feature without any version information."
+  (let [nsstr (name (ns-name namespace))]
+    (reduce-kv (fn [fs sym vr]
+                 (if-let [feat (:feature (meta vr))]
+                   ;; true means no version info, just marked as a public feature for
+                   ;; reference                   
+                   (assoc fs (symbol nsstr (name sym)) (if (true? feat) {} feat))
+                   fs))
+               {}
+               (ns-publics namespace))))

@@ -100,5 +100,16 @@ miner.wilkins-test/Foo-50+ :wrong-version miner.wilkins-test/Foo-3.2+ 42 else :b
                             (or jdk-2.0 [clj "1.9+"]) :clj-future
                             else (+ 3 4 n))))))
 
+(deftest short-names
+  (is (= 101 (feature-cond (and clj Object) 101 else :bad)))
+  (is (= 22 (feature-cond (not miner.wilkins-test/Foo) :foo 
+                          (and miner.wilkins-test/Foo miner.wilkins-test/Bar
+                               miner.wilkins-test/version-less) 22 
+                          Object :too-late))))
 
 
+(deftest check-ns-features
+  (is (= #{'miner.wilkins-test/Foo 'miner.wilkins-test/Bar 'miner.wilkins-test/version-less}
+         (set (keys (ns-features (the-ns 'miner.wilkins-test))))))
+  (is (= #{'miner.wilkins/clj 'miner.wilkins/clojure 'miner.wilkins/jdk 'miner.wilkins/java}
+         (set (keys (ns-features (the-ns 'miner.wilkins)))))))
