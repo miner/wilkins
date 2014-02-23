@@ -128,30 +128,24 @@
        ((if (and (:plus request) (not (:qualifier request))) (complement neg?) zero?)
         (compare-versions actual request))))
 
+(defn lookup-feature [id]
+  (when-let [vsym (resolve id)]
+    (let [feat (:feature (meta vsym))
+          actual (if (or (nil? feat) (true? feat)) {} feat)]
+      (when (feature? actual)
+        actual))))
+
 (defn request-satisfied? [req]
   (when-let [id (:feature req)]
-    (when-let [vsym (resolve id)]
-      (let [feat (:feature (meta vsym))
-            actual (if (or (nil? feat) (true? feat)) {} feat)]
-        (when (feature? actual)
-          (version-satisfies? actual req))))))
+    (when-let [actual (lookup-feature id)]
+      (version-satisfies? actual req))))
 
 (defn feature-request-satisfied? [request]
   (request-satisfied? (as-request request)))
 
-
-;; hacky stuff that doesn't exactly work.  Trying to handle alias ns resolution
-;; (defn fully-qualified-namespace [sym]
-;;   (->> (resolve sym) meta :ns))
-;; 
-;; 
-;;         (when-let [nspace (fully-qualified-namespace x)]
-;;           (when (not= (namespace x) (name (ns-name nspace)))
-;;             (ns-resolve nspace (symbol (name x)))))
-
 (defn soft-resolve [x]
   (try
-     (resolve x)
+    (resolve x)
     (catch Exception _ nil)))
 
 (defn class-symbol? [x]
