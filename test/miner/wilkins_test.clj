@@ -46,9 +46,9 @@
 
 (deftest parsing-features
   (are [x y] (= (clean-map (parse-feature x)) y)
-       "foo-bar-1" {:feature 'miner.wilkins/foo-bar, :major 1}
-       "foo-bar1" {:feature 'miner.wilkins/foo-bar1}
-       "foo-bar-1.2+" {:plus true, :feature 'miner.wilkins/foo-bar, :major 1, :minor 2}
+       "foo-bar-1" {:feature 'foo-bar, :major 1}
+       "foo-bar1" {:feature 'foo-bar1}
+       "foo-bar-1.2+" {:plus true, :feature 'foo-bar, :major 1, :minor 2}
        "baz.quux/foo-bar-3.4.*"   {:feature 'baz.quux/foo-bar, :major 3, :minor 4,
                                    :incremental :*}
        "bar/foo.bar" {:feature 'bar/foo.bar}))      
@@ -56,9 +56,9 @@
 (deftest parsing-requests
   ;; slightly different from parse-feature for the case where no version is specified
   (are [x y] (= (clean-map (parse-request x)) y)
-       "foo-bar-1" {:feature 'miner.wilkins/foo-bar, :major 1}
-       "foo-bar1" {:feature 'miner.wilkins/foo-bar1 :major :*}
-       "foo-bar-1.2+" {:plus true, :feature 'miner.wilkins/foo-bar, :major 1, :minor 2}
+       "foo-bar-1" {:feature 'foo-bar :major 1}
+       "foo-bar1" {:feature 'foo-bar1 :major :*}
+       "foo-bar-1.2+" {:plus true, :feature 'foo-bar, :major 1, :minor 2}
        "baz.quux/foo-bar-3.4.*"   {:feature 'baz.quux/foo-bar, :major 3, :minor 4,
                                    :incremental :*}
        "bar/foo.bar" {:feature 'bar/foo.bar :major :*}))
@@ -113,3 +113,4 @@ miner.wilkins-test/Foo-50+ :wrong-version miner.wilkins-test/Foo-3.2+ 42 else :b
          (set (keys (ns-features (the-ns 'miner.wilkins-test))))))
   (is (= #{'miner.wilkins/clj 'miner.wilkins/clojure 'miner.wilkins/jdk 'miner.wilkins/java}
          (set (keys (ns-features (the-ns 'miner.wilkins)))))))
+

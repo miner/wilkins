@@ -4,6 +4,12 @@
   (:require [clojure.string :as str]))
 
 
+;; for now, there aren't many requirements
+;; typical keys are :major, :minor, :incremental
+(def feature? map?)
+
+(defn request? [x] (and (feature? x) (:feature x)))
+
 (defn parse-long [s]
   (cond (nil? s) nil
         (= s "*") :*
@@ -17,7 +23,7 @@
 
 (defn parse-feature  [fstr]
   (let [[head tail] (str/split fstr #"/" 2)
-        ns (if tail head "miner.wilkins")
+        ns (when tail head)
         sym (or tail head)
         [valid id major minor increm qual plus] 
           (re-matches #"(?:(\D+)-)(\d+|[*])(?:\.(\d+|[*]))?(?:\.(\d+|[*]))?-?([^+/.]*)(\+)?" sym)
@@ -28,7 +34,7 @@
                       :minor (parse-long minor)
                       :incremental (parse-long increm)
                       :qualifier (not-empty qual)}
-                     {:feature (symbol ns sym)} )]
+                     {:feature (symbol fstr)} )]
     (if (and id feature (or (not major) (= plus "+") (= major "*")))
       (assoc feature :plus true)
       feature)))
@@ -49,7 +55,7 @@
 ;; converts a string, symbol, or vector as necessary to a feature map
 (defn as-feature [fspec]
   (cond (nil? fspec) nil
-        (map? fspec) fspec
+        (feature? fspec) fspec
         (vector? fspec) (if (second fspec)
                           (assoc (parse-version (second fspec)) :feature (first fspec))
                           {:feature (first fspec)})
@@ -63,7 +69,7 @@
   (let [feat (as-feature rspec)]
     (if-not (:major feat)
       (assoc feat :major :*)
-      feat))) 
+      feat)))
 
 (defn parse-request [rstr]
   (let [feat (parse-feature rstr)]
@@ -75,9 +81,6 @@
         (integer? vspec) {:major vspec}
         (float? vspec) (parse-version (str vspec))
         :else (parse-version vspec)))
-
-(defn feature-clojure []
-  (assoc *clojure-version* :feature 'miner.wilkins/clojure))
 
 (defn feature-java []
   (let [jdk-version (System/getProperty "java.version")
@@ -100,8 +103,6 @@
 (defmacro request [rspec]
   `'~(as-request rspec))
 
-;; for now, there aren't many requirements
-(def feature? map?)
 
 (defn compare-versions [a b]
   ;; allows last element to be :* as a wildcard
@@ -128,40 +129,41 @@
        ((if (and (:plus request) (not (:qualifier request))) (complement neg?) zero?)
         (compare-versions actual request))))
 
+(defn safe-resolve [x]
+  (try
+    (or (when (special-symbol? x) x) (resolve x) (ns-resolve (the-ns 'miner.wilkins) x))
+    (catch Exception _ nil)))
+
 (defn lookup-feature [id]
-  (when-let [vsym (resolve id)]
-    (let [feat (:feature (meta vsym))
-          actual (if (or (nil? feat) (true? feat)) {} feat)]
-      (when (feature? actual)
-        actual))))
+  (when-let [vsym (safe-resolve id)]
+    (let [feat (:feature (meta vsym))]
+      (cond (nil? feat) {}  ;; class reference or var with no :feature info
+            (true? feat) {} ;; var marked ^:feature
+            (feature? feat) feat  ;; normal feature map
+            :else nil)))) 
 
 (defn request-satisfied? [req]
   (when-let [id (:feature req)]
     (when-let [actual (lookup-feature id)]
       (version-satisfies? actual req))))
 
-(defn feature-request-satisfied? [request]
-  (request-satisfied? (as-request request)))
 
-(defn soft-resolve [x]
-  (try
-    (resolve x)
-    (catch Exception _ nil)))
 
 (defn class-symbol? [x]
-  (and (symbol? x) (not (namespace x)) (.contains (name x) ".") (class? (soft-resolve x))))
+  (and (symbol? x) (not (namespace x)) (.contains (name x) ".") (class? (safe-resolve x))))
+
 
 (defn satisfied? [request]
   (cond (not request) false
         (#{'else :else true} request) true
-        (special-symbol? request) true
-        (class-symbol? request) true
-        (symbol? request)  (or (soft-resolve request) (feature-request-satisfied? request))
-        (vector? request)  (feature-request-satisfied? request)
-        (string? request)  (feature-request-satisfied? request)
+        ;;(special-symbol? request) true
+        ;;(class-symbol? request) true
+        (request? request) (request-satisfied? request)
+        (or (symbol? request) (vector? request) (string? request))
+          (request-satisfied? (as-request request))
         (seq? request) (let [op (first request)]
                          (case op
-                           quote (feature-request-satisfied? request)
+                           quote (request-satisfied? {:feature (second request) :major :*})
                            and (every? satisfied? (rest request))
                            or (some satisfied? (rest request))
                            not (not (satisfied? (second request)))))
@@ -192,8 +194,8 @@
         (#{'else :else true} request) true
         (special-symbol? request) true
         (class-symbol? request) true
-        (symbol? request)  `(or (soft-resolve '~request) 
-                                (request-satisfied? '~(as-request request)))
+        (symbol? request)  `(or (safe-resolve '~request) 
+                                (satisfied? '~(as-request request)))
         (vector? request)  `(request-satisfied? '~(as-request request))
         (string? request)  `(request-satisfied? '~(as-request request))
         (seq? request) (let [op (first request)]
