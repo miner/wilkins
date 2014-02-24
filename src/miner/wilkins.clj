@@ -1,7 +1,9 @@
 (ns miner.wilkins
   "Wilkins creature feature lib"
   {:version "0.2.0"}
-  (:require [clojure.string :as str]))
+  (:require [clojure.string :as str]
+            miner.wilkins
+            miner.wilkins.features))
 
 
 ;; for now, there aren't many requirements
@@ -10,16 +12,17 @@
 
 (defn request? [x] (and (feature? x) (:feature x)))
 
-(defn parse-long [s]
-  (cond (nil? s) nil
-        (= s "*") :*
-        :else (Long/parseLong s)))
+;; SEM FIXME - hack, probably should make a util namespace to fix
+(def parse-long #'miner.wilkins.features/-parse-long)
+(def parse-version #'miner.wilkins.features/-parse-version)
+
 
 ;; hairy regx, maybe should do some sanity checking
 ;; should verify that not both .* and + are used
 ;; only one version terminating .* is allowed
 ;; also if there's a qual, neither wildcard is allowed (currently is allowed)
 ;; hyphen is allowed before version number
+
 
 (defn parse-feature  [fstr]
   (let [[head tail] (str/split fstr #"/" 2)
@@ -38,19 +41,6 @@
     (if (and id feature (or (not major) (= plus "+") (= major "*")))
       (assoc feature :plus true)
       feature)))
-
-(defn parse-version [vstr]
-  (let [[valid major minor increm qual plus] 
-          (re-matches #"(\d+|[*])?(?:\.(\d+|[*]))?(?:\.(\d+|[*]))?-?([^+/.]*)(\+)?" vstr)
-         version (and valid
-                       {:version vstr
-                        :major (parse-long major)
-                        :minor (parse-long minor)
-                        :incremental (parse-long increm)
-                        :qualifier (not-empty qual)})]
-    (if (and version (or (not major) (= plus "+") (= major "*")))
-      (assoc version :plus true)
-      version)))
 
 ;; converts a string, symbol, or vector as necessary to a feature map
 (defn as-feature [fspec]
@@ -81,17 +71,6 @@
         (integer? vspec) {:major vspec}
         (float? vspec) (parse-version (str vspec))
         :else (parse-version vspec)))
-
-(defn feature-java []
-  (let [jdk-version (System/getProperty "java.version")
-        java-feature (parse-version (first (str/split jdk-version #"_")))]
-    (assoc java-feature :version jdk-version)))
-
-(def ^{:feature (assoc *clojure-version* :version (clojure-version))} clojure)
-(def ^{:feature (:feature (meta #'clojure))} clj)
-
-(def ^{:feature (feature-java)} java)
-(def ^{:feature (:feature (meta #'java))} jdk)
 
 ;; macro to make it easy to create a literal feature map
 (defmacro feature [fspec]
@@ -131,7 +110,7 @@
 
 (defn safe-resolve [x]
   (try
-    (or (when (special-symbol? x) x) (resolve x) (ns-resolve (the-ns 'miner.wilkins) x))
+    (or (when (special-symbol? x) x) (resolve x) (ns-resolve (the-ns 'miner.wilkins.features) x))
     (catch Exception _ nil)))
 
 (defn lookup-feature [id]
@@ -166,7 +145,9 @@
                            quote (request-satisfied? {:feature (second request) :major :*})
                            and (every? satisfied? (rest request))
                            or (some satisfied? (rest request))
-                           not (not (satisfied? (second request)))))
+                           not (not (satisfied? (second request)))
+                           (throw (ex-info (str "Malformed feature request: " (pr-str request))
+                              {:request request}))))
         :else (throw (ex-info (str "Malformed feature request: " (pr-str request))
                               {:request request}))))
 
@@ -189,23 +170,21 @@
   ([con fspec] `(satisfaction-test ~fspec))
   ([con fspec & more] `(~con (satisfaction-test ~fspec) (conjunctive-satisfaction ~con ~@more))))
 
-(defmacro satisfaction-test [request]
-  (cond (not request) false
-        (#{'else :else true} request) true
-        (special-symbol? request) true
-        (class-symbol? request) true
-        (symbol? request)  `(or (safe-resolve '~request) 
-                                (satisfied? '~(as-request request)))
-        (vector? request)  `(request-satisfied? '~(as-request request))
-        (string? request)  `(request-satisfied? '~(as-request request))
-        (seq? request) (let [op (first request)]
-                         (case op
-                           quote `(request-satisfied? '~(as-request request))
-                           and `(conjunctive-satisfaction and ~@(next request))
-                           or `(conjunctive-satisfaction or ~@(next request))
-                           not `(not (satisfaction-test ~(second request)))))
-        :else (throw (ex-info (str "Malformed feature request: " (pr-str request))
-                              {:request request}))))
+(defmacro satisfaction-test [req]
+  (cond (not req) false
+        (#{'else :else true} req) true
+        (special-symbol? req) true
+        (class-symbol? req) true
+        (or (symbol? req) (vector? req) (string? req))  `(request-satisfied? '~(as-request req))
+        (seq? req) (case (first req)
+                     quote `(request-satisfied? {:feature ~(second req) :major :*})
+                     and `(conjunctive-satisfaction and ~@(next req))
+                     or `(conjunctive-satisfaction or ~@(next req))
+                     not `(not (satisfaction-test ~(second req)))
+                     (throw (ex-info (str "Malformed feature request: " (pr-str req))
+                              {:request req})))
+          :else (throw (ex-info (str "Malformed feature request: " (pr-str req))
+                              {:request req}))))
 
 ;; for use at runtime as opposed to readtime
 

@@ -15,7 +15,6 @@ Clojars.org:
 [clojar]: https://clojars.org/com.velisco/wilkins
 
 
-
 ## Example
 
 In your `data_readers.clj` you can assign a tag to enable the conditional reader like this:
@@ -57,7 +56,8 @@ name contains a hyphen followed by digit, the parser will be confused.  In that 
 can either quote the symbol or use the vector form of the feature requirement.
 
 A feature requirement can also be a literal vector of a name symbol and a version string.  This allows you to use
-a feature name that contains a digit, such as `[lucky7 "1.2+"]`.
+a feature name that contains a digit, such as `[lucky-7 "1.2+"]`.  The version string can be
+omitted if you don't care about versioning.
 
 A feature declaration is simply a Clojure var with metadata declared for the `:feature`
 key.  
@@ -74,11 +74,10 @@ namespace.  For example, `miner.wilkins/clj` is a var with metadata defining the
 Clojure version (taken from `*clojure-version*`).  `clojure` is a synonym for `clj`.  The
 vars `java` and `jdk` have the version of the JDK.
 
-
-
-A def requirement simply requires that the name symbol has been declared (it could be a var, class,
-record type, etc.)  It is specified with `@` prefix, such as `@clojure.core/*data-readers*`.  There
-is no versioning for def requirements.
+A feature requirement without a version simply requires that var exist.  You can also require
+that a Java class exists by using its name as the feature symbol.  As in Clojure, a  Java
+class is named by a simple symbol (no namespace) containing internal periods -- for
+example, `java.util.concurrent.ForkJoinPool`.
 
 Boolean combinations use list expressions beginning with `and`, `or` or `not`.  For example: `(and
 jdk1.6+ clj1.5+)`.

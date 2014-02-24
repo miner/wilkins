@@ -1,6 +1,7 @@
 (ns miner.wilkins-test
   (:use clojure.test
-        miner.wilkins))
+        miner.wilkins)
+  (:require miner.wilkins.features))
 
 ;; defines some features used in these tests
 
@@ -9,6 +10,9 @@
 (def ^{:feature (version "20.34")} Bar)
 
 (def ^:feature version-less 42)
+
+;; potentially ambiguous def, no version
+(def ^:feature lucky-7)
 
 (defn clj14+? []
   #x/condf [clr false [clj "1.4+"] true else false])
@@ -64,10 +68,12 @@
        "bar/foo.bar" {:feature 'bar/foo.bar :major :*}))
 
 (deftest defined-test
-  (is (= #x/condf [miner.wilkins/clojure :ok] :ok))
+  (is (= #x/condf [clojure :ok] :ok))
   (is (= #x/condf [miner.wilkins/not-there :bad miner.wilkins/condf :ok] :ok))
-  (is (= #x/condf [miner.wilkins/not-there :bad miner.wilkins/condf :ok] :ok))
+  (is (= #x/condf [miner.wilkins/not-there :bad condf :ok] :ok))
+  (is (= #x/condf [(and (not cond) conf) :bad cond :ok] :ok))
   (is (= #x/condf [java.lang.Long :ok] :ok))
+  (is (= #x/condf [Long :ok] :ok))
   ;; note the name-munging (- to _) on the record name as a Java class
   (is (= #x/condf [miner.wilkins_test.MyReco :ok] :ok))
   (is (= #x/condf [MyReco :ok] :ok))
@@ -83,7 +89,10 @@ miner.wilkins-test/Foo-50+ :wrong-version miner.wilkins-test/Foo-3.2+ 42 else :b
 (deftest without-version
   (is (= 11 #x/condf (miner.wilkins-test/version-less 11 else :bad)))
   (is (= 12 #x/condf (miner.wilkins-test/version-less-* 12 else :bad)))
-  (is (= 13 #x/condf (miner.wilkins-test/unknown-var :bad else (inc 12)))))
+  (is (= 13 #x/condf (miner.wilkins-test/unknown-var :bad else (inc 12))))
+  (is (= 11 #x/condf (version-less 11 else :bad)))
+  (is (= 12 #x/condf (version-less-* 12 else :bad)))
+  (is (= 13 #x/condf (unknown-var :bad else (inc 12)))))
 
 ;; ISSUE: can't handle ps/Foo because macros doesn't resolve local ns alias
 
@@ -109,8 +118,15 @@ miner.wilkins-test/Foo-50+ :wrong-version miner.wilkins-test/Foo-3.2+ 42 else :b
 
 
 (deftest check-ns-features
-  (is (= #{'miner.wilkins-test/Foo 'miner.wilkins-test/Bar 'miner.wilkins-test/version-less}
+  (is (= #{'miner.wilkins-test/Foo 'miner.wilkins-test/Bar 'miner.wilkins-test/version-less
+           'miner.wilkins-test/lucky-7}
          (set (keys (ns-features (the-ns 'miner.wilkins-test))))))
-  (is (= #{'miner.wilkins/clj 'miner.wilkins/clojure 'miner.wilkins/jdk 'miner.wilkins/java}
-         (set (keys (ns-features (the-ns 'miner.wilkins)))))))
+  (is (= #{'miner.wilkins.features/clj 'miner.wilkins.features/clojure
+           'miner.wilkins.features/jdk 'miner.wilkins.features/java}
+         (set (keys (ns-features (the-ns 'miner.wilkins.features)))))))
 
+#_ (deftest check-lucky
+  (is (= 7 (feature-cond lucky-7 :bad 'miner.wilkins-test/lucky-7 7)))
+  (is (= 7 (feature-cond (not lucky) 7 else :bad)))
+  (is (= 7 (feature-cond [lucky "7"] :bad [miner.wilkins-test/lucky-7] 7 else :bad2)))
+  (is (= 7 (feature-cond [lucky "7"] :bad [lucky-7] 7 else :bad2))))
