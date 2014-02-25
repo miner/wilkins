@@ -136,6 +136,7 @@ miner.wilkins-test/Foo-50+ :wrong-version miner.wilkins-test/Foo-3.2+ 42 else :b
 
 (deftest check-lucky-reader
   (is (= 7 #x/condf [lucky-7 :bad 'miner.wilkins-test/lucky-7 7]))
+  (is (= 7 #x/condf [lucky-7 :bad 'lucky-7 7]))
   (is (= 7 #x/condf [(not lucky) 7 else :bad]))
   (is (= 7 #x/condf [[lucky "7"] :bad [miner.wilkins-test/lucky-7] 7 else :bad2]))
   (is (= 7 #x/condf [[lucky "7"] :bad [lucky-7] 7 else :bad2])))
