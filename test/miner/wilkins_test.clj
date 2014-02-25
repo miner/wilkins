@@ -1,7 +1,6 @@
 (ns miner.wilkins-test
   (:use clojure.test
-        miner.wilkins)
-  (:require miner.wilkins.features))
+        miner.wilkins))
 
 ;; defines some features used in these tests
 
@@ -49,7 +48,7 @@
   (reduce-kv (fn [m k v] (if-not v (dissoc m k) m)) mp mp))
 
 (deftest parsing-features
-  (are [x y] (= (clean-map (parse-feature x)) y)
+  (are [x y] (= (clean-map (as-feature x)) y)
        "foo-bar-1" {:feature 'foo-bar, :major 1}
        "foo-bar1" {:feature 'foo-bar1}
        "foo-bar-1.2+" {:plus true, :feature 'foo-bar, :major 1, :minor 2}
@@ -58,8 +57,8 @@
        "bar/foo.bar" {:feature 'bar/foo.bar}))      
 
 (deftest parsing-requests
-  ;; slightly different from parse-feature for the case where no version is specified
-  (are [x y] (= (clean-map (parse-request x)) y)
+  ;; slightly different from as-feature for the case where no version is specified
+  (are [x y] (= (clean-map (as-request x)) y)
        "foo-bar-1" {:feature 'foo-bar :major 1}
        "foo-bar1" {:feature 'foo-bar1 :major :*}
        "foo-bar-1.2+" {:plus true, :feature 'foo-bar, :major 1, :minor 2}
@@ -141,6 +140,4 @@ miner.wilkins-test/Foo-50+ :wrong-version miner.wilkins-test/Foo-3.2+ 42 else :b
   (is (= 7 (feature-cond (not lucky) 7 else :bad)))
   (is (= 7 (feature-cond [lucky "7"] :bad [miner.wilkins-test/lucky-7] 7 else :bad2)))
   (is (= 7 (feature-cond [lucky "7"] :bad [lucky-7] 7 else :bad2))))
-
-
 

@@ -2,7 +2,7 @@
   "Wilkins creature feature lib"
   {:version "0.2.0"}
   (:require [clojure.string :as str]
-            miner.wilkins
+            [miner.wilkins.parse :as p]
             miner.wilkins.features))
 
 
@@ -12,46 +12,16 @@
 
 (defn request? [x] (and (feature? x) (:feature x)))
 
-;; SEM FIXME - hack, probably should make a util namespace to fix
-(def parse-long #'miner.wilkins.features/-parse-long)
-(def parse-version #'miner.wilkins.features/-parse-version)
-
-
-;; hairy regx, maybe should do some sanity checking
-;; should verify that not both .* and + are used
-;; only one version terminating .* is allowed
-;; also if there's a qual, neither wildcard is allowed (currently is allowed)
-;; hyphen is allowed before version number
-
-
-(defn parse-feature  [fstr]
-  (let [[head tail] (str/split fstr #"/" 2)
-        ns (when tail head)
-        sym (or tail head)
-        [valid id major minor increm qual plus] 
-          (re-matches #"(?:(\D+)-)(\d+|[*])(?:\.(\d+|[*]))?(?:\.(\d+|[*]))?-?([^+/.]*)(\+)?" sym)
-        id (not-empty id)
-        feature (if (and valid id)
-                     {:feature (symbol ns id)
-                      :major (parse-long major)
-                      :minor (parse-long minor)
-                      :incremental (parse-long increm)
-                      :qualifier (not-empty qual)}
-                     {:feature (symbol fstr)} )]
-    (if (and id feature (or (not major) (= plus "+") (= major "*")))
-      (assoc feature :plus true)
-      feature)))
-
 ;; converts a string, symbol, or vector as necessary to a feature map
 (defn as-feature [fspec]
   (cond (nil? fspec) nil
         (feature? fspec) fspec
         (vector? fspec) (if (second fspec)
-                          (assoc (parse-version (second fspec)) :feature (first fspec))
+                          (assoc (p/parse-version (second fspec)) :feature (first fspec))
                           {:feature (first fspec)})
         (and (seq? fspec) (= (first fspec) 'quote)) {:feature (second fspec)}
-        (string? fspec) (parse-feature fspec)
-        (symbol? fspec) (parse-feature (str fspec))
+        (string? fspec) (p/parse-feature fspec)
+        (symbol? fspec) (p/parse-feature (str fspec))
         :else (throw (ex-info (str "Malformed feature specification: " (pr-str fspec))
                               {:fspec fspec}))))
 
@@ -62,15 +32,15 @@
       feat)))
 
 (defn parse-request [rstr]
-  (let [feat (parse-feature rstr)]
+  (let [feat (p/parse-feature rstr)]
     (as-request feat)))
 
 (defn as-version [vspec]
   (cond (nil? vspec) {:plus true :major :*}
         (map? vspec) vspec
         (integer? vspec) {:major vspec}
-        (float? vspec) (parse-version (str vspec))
-        :else (parse-version vspec)))
+        (float? vspec) (p/parse-version (str vspec))
+        :else (p/parse-version vspec)))
 
 ;; macro to make it easy to create a literal feature map
 (defmacro feature [fspec]
