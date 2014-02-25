@@ -141,8 +141,11 @@ miner.wilkins-test/Foo-50+ :wrong-version miner.wilkins-test/Foo-3.2+ 42 else :b
   (is (= 7 #x/condf [[lucky "7"] :bad [miner.wilkins-test/lucky-7] 7 else :bad2]))
   (is (= 7 #x/condf [[lucky "7"] :bad [lucky-7] 7 else :bad2])))
 
-#_ (deftest check-lucky-runtime
+(deftest check-lucky-runtime
   (is (= 7 (feature-cond lucky-7 :bad 'miner.wilkins-test/lucky-7 7)))
   (is (= 7 (feature-cond (not lucky) 7 else :bad)))
   (is (= 7 (feature-cond [lucky "7"] :bad [miner.wilkins-test/lucky-7] 7 else :bad2)))
-  (is (= 7 (feature-cond [lucky "7"] :bad [lucky-7] 7 else :bad2))))
+  ;; not sure why binding *ns* is necessary but it allows unqualified symbols to work at runtime
+  (binding [*ns* (the-ns 'miner.wilkins-test)]
+    (is (= 7 (feature-cond lucky-7 :bad 'lucky-7 7)))
+    (is (= 7 (feature-cond [lucky "7"] :bad [lucky-7] 7 else :bad2)))) )

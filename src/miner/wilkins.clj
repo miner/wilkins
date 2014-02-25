@@ -147,7 +147,7 @@
         (class-symbol? req) true
         (or (symbol? req) (vector? req) (string? req))  `(request-satisfied? '~(as-request req))
         (seq? req) (case (first req)
-                     quote `(request-satisfied? {:feature ~(second req) :major :*})
+                     quote `(request-satisfied? '{:feature ~(second req) :major :*})
                      and `(conjunctive-satisfaction and ~@(next req))
                      or `(conjunctive-satisfaction or ~@(next req))
                      not `(not (satisfaction-test ~(second req)))
@@ -158,10 +158,15 @@
 
 ;; for use at runtime as opposed to readtime
 
+(defmacro BAD-feature-cond 
+  ([] nil)
+  ([fspec form] `(if (satisfaction-test '~fspec) ~form nil))
+  ([fspec form & more] `(if (satisfaction-test '~fspec) ~form (feature-cond ~@more))))
+
 (defmacro feature-cond 
   ([] nil)
-  ([fspec form] `(if (satisfaction-test ~fspec) ~form nil))
-  ([fspec form & more] `(if (satisfaction-test ~fspec) ~form (feature-cond ~@more))))
+  ([fspec form] `(if (satisfied? '~fspec) ~form nil))
+  ([fspec form & more] `(if (satisfied? '~fspec) ~form (feature-cond ~@more))))
 
 
 (defn ns-features [namespace]
