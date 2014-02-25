@@ -80,36 +80,14 @@ class is named by a simple symbol (no namespace) containing internal periods -- 
 example, `java.util.concurrent.ForkJoinPool`.
 
 Boolean combinations use list expressions beginning with `and`, `or` or `not`.  For example: `(and
-jdk1.6+ clj1.5+)`.
-
-Available features are kept in an atom `feature-map`.  It initially has features for the keys
-`clojure` and `java`, plus any features declared by the property `wilkins.features`.  The property's
-value should be a string of compact features separated by spaces.  For example, you could use
-`-Dwilkins.features="x/foo1.2.3 y/bar4.5"` in your Java command line to declare feature `x/foo`1.2.3
-and `y/bar`4.5.  For convenience, `clj` is a synonym for `clojure` and `jdk` is a synonym for `java`
-in the default `@feature-map`.
-
-The `provide` function provides a feature in user code.  If the symbol does not have a namespace,
-the current `*ns*` will be used (usually, the namespace of the source file.)  A source file should
-not normally provide a feature in another namespace, but it is currently allowed to do so.
-Typically, you'll leave the namespace off and take the default `*ns*`.
+jdk-1.6+ clj-1.5+)`.
 
 
 ## Details
 
-The atom `feature-map` is a map of feature symbols to features.  Each feature is a map with keys: `:feature`
-(value: symbol), `:version` (value: list of ints), and `:qualifier` (value: a String).  The :version
-is a list of ints corresponding to the version string.  So "1.2.3" is :version (1 2 3).  Feature
-requirements are encoded in the same sort of map, but with an additional key :plus (value: true or
-false) to indicate if the plus (+) was included in the feature requirement.
-
 A feature version requirement is one of:
-* unqualified symbol, for example: `clj1.4`
+* unqualified symbol, for example: `clj-1.4`
 * a vector of [name "ver"], for example: `[clj "1.4+"]`
-
-A def requirement is one of:
-* @symbol, for example: `@foo.bar/baz`
-* a list starting with `deref`, for example: `(deref foo.bar/baz)`
 
 A boolean feature requirement is
 * a list starting with `and`, `or`, or `not` combining other feature requirements
@@ -120,8 +98,8 @@ A boolean feature requirement is
 The `feature-cond` macro is like `cond` but the tests are feature specifications (unquoted as in the
 `condf` data-reader).  This macro, of course, performs the checks at runtime.
 
-    (feature-cond (and clj (not foo2.4+)) (do-something 1 2)
-	              (or clj1.5 [clj "1.4"]) :clj 
+    (feature-cond (and clj (not foo-2.4+)) (do-something 1 2)
+	              (or clj-1.5 [clj "1.4"]) :clj 
 				  else :something-else)
 
 For conditional code based on the particular version of the JDK or Clojure, it is usually best to

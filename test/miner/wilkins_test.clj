@@ -125,8 +125,22 @@ miner.wilkins-test/Foo-50+ :wrong-version miner.wilkins-test/Foo-3.2+ 42 else :b
            'miner.wilkins.features/jdk 'miner.wilkins.features/java}
          (set (keys (ns-features (the-ns 'miner.wilkins.features)))))))
 
+(deftest lucky-parsing
+  ;; normal parsing takes the 7 as a version
+  (is (= (clean-map (as-request 'lucky-7)) '{:feature lucky, :major 7}))
+  ;; quote protects the -7 as part of the symbol
+  (is (= (clean-map (as-request '(quote lucky-7))) '{:major :*, :feature lucky-7}))
+  ;; double single-quote looks weird but works
+  (is (= (clean-map (as-request ''lucky-7)) '{:major :*, :feature lucky-7}))
+  ;; vector with no version also works
+  (is (= (clean-map (as-request '[lucky-7])) '{:major :*, :feature lucky-7})))
+
+
 #_ (deftest check-lucky
   (is (= 7 (feature-cond lucky-7 :bad 'miner.wilkins-test/lucky-7 7)))
   (is (= 7 (feature-cond (not lucky) 7 else :bad)))
   (is (= 7 (feature-cond [lucky "7"] :bad [miner.wilkins-test/lucky-7] 7 else :bad2)))
   (is (= 7 (feature-cond [lucky "7"] :bad [lucky-7] 7 else :bad2))))
+
+
+
