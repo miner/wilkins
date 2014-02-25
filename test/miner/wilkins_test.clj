@@ -142,10 +142,14 @@ miner.wilkins-test/Foo-50+ :wrong-version miner.wilkins-test/Foo-3.2+ 42 else :b
   (is (= 7 #x/condf [[lucky "7"] :bad [lucky-7] 7 else :bad2])))
 
 (deftest check-lucky-runtime
+  ;; note lucky-7 is the var name (not version 7 of lucky), to disambiguate that from
+  ;; [lucky "7"], you need the extra quote 'lucky-7 or [lucky-7] vector format.
   (is (= 7 (feature-cond lucky-7 :bad 'miner.wilkins-test/lucky-7 7)))
+  (is (= 7 (feature-cond miner.wilkins-test/lucky-7 :bad 'miner.wilkins-test/lucky-7 7)))
   (is (= 7 (feature-cond (not lucky) 7 else :bad)))
   (is (= 7 (feature-cond [lucky "7"] :bad [miner.wilkins-test/lucky-7] 7 else :bad2)))
-  ;; not sure why binding *ns* is necessary but it allows unqualified symbols to work at runtime
   (binding [*ns* (the-ns 'miner.wilkins-test)]
+    ;; Honestly, not really sure why binding the *ns* is required, but otherwise the tests
+    ;; run with the 'user namespace as the *ns*.
     (is (= 7 (feature-cond lucky-7 :bad 'lucky-7 7)))
     (is (= 7 (feature-cond [lucky "7"] :bad [lucky-7] 7 else :bad2)))) )
