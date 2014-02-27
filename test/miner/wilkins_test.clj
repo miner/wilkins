@@ -153,3 +153,11 @@ miner.wilkins-test/Foo-50+ :wrong-version miner.wilkins-test/Foo-3.2+ 42 else :b
     ;; run with the 'user namespace as the *ns*.
     (is (= 7 (feature-cond lucky-7 :bad 'lucky-7 7)))
     (is (= 7 (feature-cond [lucky "7"] :bad [lucky-7] 7 else :bad2)))) )
+
+
+(def ^{:feature false} disabled-feature)
+
+(deftest disabled-feature
+  (is 13  (feature-cond (not miner.wilkins-test/disabled-feature) 13
+                        miner.wilkins-test/disabled-feature 7)))
+
