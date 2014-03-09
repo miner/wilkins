@@ -7,7 +7,6 @@
         (= s "*") :*
         :else (Long/parseLong s)))
 
-;; this is here for convenience, but logically the function is part of 
 (defn parse-version [vstr]
   (let [[valid major minor increm qual plus] 
           (re-matches #"(\d+|[*])?(?:\.(\d+|[*]))?(?:\.(\d+|[*]))?-?([^+/.]*)(\+)?" vstr)

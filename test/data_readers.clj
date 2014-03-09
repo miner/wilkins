@@ -1,1 +1,1 @@
-{x/condf miner.wilkins/condf}
+{x/condf miner.wilkins/condf-reader}

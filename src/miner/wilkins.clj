@@ -5,8 +5,7 @@
             miner.wilkins.features))
 
 
-
-(defn request? [x] (and (map? x) (:feature x)))
+(defn simple-requirement? [x] (boolean (and (map? x) (:feature x))))
 
 ;; converts a string, symbol, or vector as necessary to a feature map
 (defn as-feature [fspec]
@@ -19,17 +18,17 @@
         (string? fspec) (p/parse-feature fspec)
         (symbol? fspec) (p/parse-feature (str fspec))
         :else (throw (ex-info (str "Malformed feature specification: " (pr-str fspec))
-                              {:fspec fspec}))))
+                              {:bad-fspec fspec}))))
 
-(defn as-feature-request [rspec]
+(defn as-simple-requirement [rspec]
   (let [feat (as-feature rspec)]
     (if-not (:major feat)
       (assoc feat :major :*)
       feat)))
 
-(defn parse-request [rstr]
+(defn parse-requirement [rstr]
   (let [feat (p/parse-feature rstr)]
-    (as-feature-request feat)))
+    (as-simple-requirement feat)))
 
 (defn as-version [vspec]
   (cond (nil? vspec) {:plus true :major :*}
@@ -38,14 +37,12 @@
         (float? vspec) (p/parse-version (str vspec))
         :else (p/parse-version vspec)))
 
-;; macro to make it easy to create a literal feature map
+;; macro to make it easy to create a literal feature map from a version string or "feature
+;; expression" (symbol or vector notation).  The map is the canonical form for a feature
+;; requirement.
 
 (defmacro version [vspec]
   `'~(as-version vspec))
-
-(defmacro feature [rspec]
-  `'~(as-feature-request rspec))
-
 
 (defn compare-versions [a b]
   ;; allows last element to be :* as a wildcard
@@ -63,21 +60,22 @@
     (comp-vers a b '(:major :minor :incremental))))
 
 
-(defn version-satisfies? [actual request]
-  {:pre [(map? actual) (map? request)]}
+(defn version-satisfies? [actual requirement]
+  {:pre [(map? actual) (map? requirement)]}
   ;; args are feature maps
   ;; assumes ids were already matched (might have been equivalent aliases, not identical)
-  ;; if request has a qualifier everything must match exactly, otherwise qualifier doesn't matter
-  (and (or (not (:qualifier request)) (= (:qualifier actual) (:qualifier request)))
-       ((if (and (:plus request) (not (:qualifier request))) (complement neg?) zero?)
-        (compare-versions actual request))))
+  ;; if requirement has a qualifier everything must match exactly, otherwise qualifier doesn't matter
+  (and (or (not (:qualifier requirement)) (= (:qualifier actual) (:qualifier requirement)))
+       ((if (and (:plus requirement) (not (:qualifier requirement))) (complement neg?) zero?)
+        (compare-versions actual requirement))))
 
 (defn safe-resolve [x]
   (try
     (or (when (special-symbol? x) x) (resolve x) (ns-resolve (the-ns 'miner.wilkins.features) x))
     (catch Exception _ nil)))
 
-(defn lookup-feature [id]
+(defn feature-version [id]
+  "Returns the version information map for the feature `id` (symbol)"
   (when-let [vsym (safe-resolve id)]
     (if-let [has (contains? (meta vsym) :feature)]
       (let [feat (:feature (meta vsym))]
@@ -88,39 +86,38 @@
       ;; class reference or var with no :feature info
       {})))
 
-(defn request-satisfied? [req]
+(defn simple-requirement-satisfied? [req]
   (when-let [id (:feature req)]
-    (when-let [actual (lookup-feature id)]
+    (when-let [actual (feature-version id)]
       (version-satisfies? actual req))))
-
-
 
 (defn class-symbol? [x]
   (and (symbol? x) (not (namespace x)) (.contains (name x) ".") (class? (safe-resolve x))))
 
-
-(defn feature? [request]
-  (cond (not request) false
-        (#{'else :else true} request) true
-        ;;(special-symbol? request) true
-        ;;(class-symbol? request) true
-        (request? request) (request-satisfied? request)
-        (or (symbol? request) (vector? request) (string? request))
-          (request-satisfied? (as-feature-request request))
-        (seq? request) (let [op (first request)]
-                         (case op
-                           quote (request-satisfied? {:feature (second request) :major :*})
-                           and (every? feature? (rest request))
-                           or (some feature? (rest request))
-                           not (not (feature? (second request)))
-                           (throw (ex-info (str "Malformed feature request: " (pr-str request))
-                              {:request request}))))
-        :else (throw (ex-info (str "Malformed feature request: " (pr-str request))
-                              {:request request}))))
+(defn feature? [requirement]
+  (cond (simple-requirement? requirement) (simple-requirement-satisfied? requirement)
+        (not requirement) false
+        (#{'else :else true} requirement) true
+        (or (symbol? requirement) (vector? requirement) (string? requirement))
+          (simple-requirement-satisfied? (as-simple-requirement requirement))
+        (seq? requirement) 
+          (let [op (first requirement)]
+            (case op
+              quote (simple-requirement-satisfied? {:feature (second requirement) :major :*})
+              and (every? feature? (rest requirement))
+              or (some feature? (rest requirement))
+              not (not (feature? (second requirement)))
+              (throw (ex-info (str "Malformed feature requirement: " (pr-str requirement))
+                              {:bad-requirement requirement}))))
+        ;; the following tests are for not normally expected args, but logically they
+        ;; should work
+        (or (class? requirement) (fn? requirement) (var? requirement)) true
+        :else (throw (ex-info (str "Malformed feature requirement: " (pr-str requirement))
+                              {:bad-requirement requirement}))))
 
 
 ;; data-reader
-(defn condf [fspecs-and-forms]
+(defn condf-reader [fspecs-and-forms]
   ;; fspecs-and-forms is sequence of alternating feature specifications and forms.
   ;; the first feature specification to succeed returns the next form as the result.
   (let [result (first (keep (fn [[fspec form]] (when (feature? fspec) form)) 
@@ -130,37 +127,54 @@
 ;; (quote nil) works around CLJ-1138
 
 
-(declare satisfaction-test)
+(declare feature-test)
 
-(defmacro conjunctive-satisfaction
+(defmacro conjunctive-test
   ([con] `(~con))
-  ([con fspec] `(satisfaction-test ~fspec))
-  ([con fspec & more] `(~con (satisfaction-test ~fspec) (conjunctive-satisfaction ~con ~@more))))
+  ([con fspec] `(feature-test ~fspec))
+  ([con fspec & more] `(~con (feature-test ~fspec) (conjunctive-test ~con ~@more))))
 
-(defmacro satisfaction-test [req]
-  (cond (not req) false
+(defmacro feature-test [req]
+  (cond (simple-requirement? req) `(simple-requirement-satisfied? req)
+        (not req) false
         (#{'else :else '(quote else) true} req) true
         (special-symbol? req) true
         (class-symbol? req) true
-        (or (symbol? req) (vector? req) (string? req))  `(request-satisfied? '~(as-feature-request req))
+        (or (symbol? req) (vector? req) (string? req))  
+          `(simple-requirement-satisfied? '~(as-simple-requirement req))
         (seq? req) (case (first req)
                      quote (if (symbol? (second req))
-                             `(request-satisfied? '{:feature ~(second req) :major :*})
-                             `(satisfaction-test ~(second req)))
-                     and `(conjunctive-satisfaction and ~@(next req))
-                     or `(conjunctive-satisfaction or ~@(next req))
-                     not `(not (satisfaction-test ~(second req)))
-                     (throw (ex-info (str "Malformed feature request: " (pr-str req))
-                              {:request req})))
-          :else (throw (ex-info (str "Malformed feature request: " (pr-str req))
-                              {:request req}))))
+                             `(simple-requirement-satisfied? '{:feature ~(second req) :major :*})
+                             `(feature-test ~(second req)))
+                     and `(conjunctive-test and ~@(next req))
+                     or `(conjunctive-test or ~@(next req))
+                     not `(not (feature-test ~(second req)))
+                     (throw (ex-info (str "Malformed feature requirement: " (pr-str req))
+                                     {:bad-requirement req})))
+          :else (throw (ex-info (str "Malformed feature requirement: " (pr-str req))
+                              {:bad-requirement req}))))
 
-;; for use at runtime as opposed to readtime
+;; for use at runtime as opposed to readtime, but probably simpler to use `feature?`
+(defmacro runtime-condf
+  ([fspec form] `(if (feature-test ~fspec) ~form nil))
+  ([fspec form & more] `(if (feature-test ~fspec) ~form (runtime-condf ~@more))))
 
-(defmacro feature-cond 
-  ([] nil)
-  ([fspec form] `(if (satisfaction-test ~fspec) ~form nil))
-  ([fspec form & more] `(if (satisfaction-test ~fspec) ~form (feature-cond ~@more))))
+(defmacro compile-if
+ "Evals `compile-time-test` at compile time and chooses `then-expr` or `else-expr` as the
+ expression.  Once it's compiled, the test will never be checked again. Note: Works at
+ compile-time.  Be careful about AOT compilation."
+ [compile-time-test then-expr else-expr]
+ (let [result (try (eval compile-time-test) (catch Exception e nil))]
+   (if result
+     then-expr
+     else-expr)))
+
+(defmacro compile-condf
+  "Like `feature-cond` but evals the feature requirements at compile time.  The compiler
+ends up seeing just the result expression of the successful feature requirement. Note: Works
+at compile-time.  Be careful about AOT compilation."
+  ([fspec form] `(compile-if (feature-test ~fspec) ~form nil))
+  ([fspec form & more] `(compile-if (feature-test ~fspec) ~form (compile-condf ~@more))))
 
 (defn ns-features [namespace]
   "Returns a map of the features declare in the namespace.  The keys are fully qualified
