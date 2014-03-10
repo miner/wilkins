@@ -1,4 +1,4 @@
-(defproject com.velisco/wilkins "0.1.8"
+(defproject com.velisco/wilkins "0.2.0"
   :description "Experimental lib for Clojure conditional reader using tagged literals"
   :url "http://github.com/miner/wilkins"
   :license {:name "Eclipse Public License"
@@ -10,7 +10,7 @@
 
   :profiles {:clj15  {:dependencies [[org.clojure/clojure "1.5.1"]]}
              :clj14 {:dependencies [[org.clojure/clojure "1.4.0"]]}
-             :beta1 {:dependencies [[org.clojure/clojure "1.6.0-beta1"]]}
+             :beta2 {:dependencies [[org.clojure/clojure "1.6.0-beta2"]]}
              :snap {:dependencies [[org.clojure/tools.nrepl "0.2.3"]
                                    [org.clojure/clojure "1.6.0-master-SNAPSHOT"]]}
              })
