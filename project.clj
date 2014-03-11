@@ -10,7 +10,7 @@
 
   :profiles {:clj15  {:dependencies [[org.clojure/clojure "1.5.1"]]}
              :clj14 {:dependencies [[org.clojure/clojure "1.4.0"]]}
-             :beta2 {:dependencies [[org.clojure/clojure "1.6.0-beta2"]]}
+             :rc1 {:dependencies [[org.clojure/clojure "1.6.0-rc1"]]}
              :snap {:dependencies [[org.clojure/tools.nrepl "0.2.3"]
                                    [org.clojure/clojure "1.6.0-master-SNAPSHOT"]]}
              })
