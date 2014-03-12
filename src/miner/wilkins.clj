@@ -26,16 +26,13 @@
       (assoc feat :major :*)
       feat)))
 
-(defn parse-requirement [rstr]
-  (let [feat (p/parse-feature rstr)]
-    (as-simple-requirement feat)))
-
 (defn as-version [vspec]
-  (cond (nil? vspec) {:plus true :major :*}
+  (cond (nil? vspec) {}
         (map? vspec) vspec
+        (string? vspec) (p/parse-version vspec)
         (integer? vspec) {:major vspec}
-        (float? vspec) (p/parse-version (str vspec))
-        :else (p/parse-version vspec)))
+        ;; decimal? or float?
+        :else (p/parse-version (str vspec))))
 
 ;; macro to make it easy to create a literal feature map from a version string or "feature
 ;; expression" (symbol or vector notation).  The map is the canonical form for a feature
@@ -43,6 +40,7 @@
 
 (defmacro version [vspec]
   `'~(as-version vspec))
+
 
 (defn compare-versions [a b]
   ;; allows last element to be :* as a wildcard
