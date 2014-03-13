@@ -1,11 +1,10 @@
 (ns miner.wilkins.parse
   (:require [clojure.string :as str]))
 
-(defn assoc-when 
-  ([m k v] (if v (assoc m k v) m))
-  ([m k v & kvs] (reduce (fn [m1 [k1 v1]] (assoc-when m1 k1 v1)) 
-                         (assoc-when m k v)
-                         (partition 2 kvs))))
+
+(defn dismap [m]
+  "Remove falsey values and associated keys from the map `m`"
+  (reduce-kv (fn [r k v] (if-not v (dissoc r k) r)) m m))
 
 (defn parse-long [s]
   (cond (nil? s) nil
@@ -16,15 +15,15 @@
   (cond (nil? vstr) {}
         (= vstr "") {}
         :else 
-          (let [[valid major minor increm qual plus] 
-                (re-matches #"(\d+|[*])?(?:\.(\d+|[*]))?(?:\.(\d+|[*]))?-?([^+/.]*)(\+)?" vstr)]
-            (when valid
-              (assoc-when {:version vstr}
-                          :major (parse-long major)
-                          :minor (parse-long minor)
-                          :incremental (parse-long increm)
-                          :qualifier (not-empty qual)
-                          :plus (= plus "+"))))))
+        (let [[valid major minor increm qual plus] 
+              (re-matches #"(\d+|[*])?(?:\.(\d+|[*]))?(?:\.(\d+|[*]))?-?([^+/.]*)(\+)?" vstr)]
+          (when valid
+            (dismap {:version vstr
+                     :major (parse-long major)
+                     :minor (parse-long minor)
+                     :incremental (parse-long increm)
+                     :qualifier (not-empty qual)
+                     :plus (= plus "+")})))))
 
 
 ;; hairy regx, maybe should do some sanity checking
@@ -38,15 +37,15 @@
         ns (when tail head)
         sym (or tail head)
         [valid id major minor increm qual plus] 
-          (re-matches #"(?:(\D+)-)(\d+|[*])(?:\.(\d+|[*]))?(?:\.(\d+|[*]))?-?([^+/.]*)(\+)?" sym)
+        (re-matches #"(?:(\D+)-)(\d+|[*])(?:\.(\d+|[*]))?(?:\.(\d+|[*]))?-?([^+/.]*)(\+)?" sym)
         id (not-empty id)]
     (if (and valid id)
-      (assoc-when {:feature (symbol ns id)}
-                  :major (parse-long major)
-                  :minor (parse-long minor)
-                  :incremental (parse-long increm)
-                  :qualifier (not-empty qual)
-                  :plus (= plus "+"))
+      (dismap {:feature (symbol ns id)
+               :major (parse-long major)
+               :minor (parse-long minor)
+               :incremental (parse-long increm)
+               :qualifier (not-empty qual)
+               :plus (= plus "+")})
       {:feature (symbol fstr)})))
 
 

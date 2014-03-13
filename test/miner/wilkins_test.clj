@@ -45,12 +45,12 @@
 (deftest foo-test
   (is (= (foo42) 42)))
 
-(defn clean-map [mp]
-  ;; clean out nil values for more compact maps
-  (reduce-kv (fn [m k v] (if-not v (dissoc m k) m)) mp mp))
+(defn dismap [m]
+  "Remove falsey values and associated keys from the map `m`"
+  (reduce-kv (fn [r k v] (if-not v (dissoc r k) r)) m m))
 
 (deftest parsing-features
-  (are [x y] (= (clean-map (as-feature x)) y)
+  (are [x y] (= (dismap (as-feature x)) y)
        "foo-bar-1" {:feature 'foo-bar, :major 1}
        "foo-bar1" {:feature 'foo-bar1}
        "foo-bar-1.2+" {:plus true, :feature 'foo-bar, :major 1, :minor 2}
@@ -60,7 +60,7 @@
 
 (deftest parsing-requirements
   ;; slightly different from as-feature for the case where no version is specified
-  (are [x y] (= (clean-map (as-simple-requirement x)) y)
+  (are [x y] (= (dismap (as-simple-requirement x)) y)
        "foo-bar-1" {:feature 'foo-bar :major 1}
        "foo-bar1" {:feature 'foo-bar1 :major :*}
        "foo-bar-1.2+" {:plus true, :feature 'foo-bar, :major 1, :minor 2}
@@ -128,13 +128,13 @@ miner.wilkins-test/Foo-50+ :wrong-version miner.wilkins-test/Foo-3.2+ 42 else :b
 
 (deftest lucky-parsing
   ;; normal parsing takes the 7 as a version
-  (is (= (clean-map (as-simple-requirement 'lucky-7)) '{:feature lucky, :major 7}))
+  (is (= (dismap (as-simple-requirement 'lucky-7)) '{:feature lucky, :major 7}))
   ;; quote protects the -7 as part of the symbol
-  (is (= (clean-map (as-simple-requirement '(quote lucky-7))) '{:major :*, :feature lucky-7}))
+  (is (= (dismap (as-simple-requirement '(quote lucky-7))) '{:major :*, :feature lucky-7}))
   ;; double single-quote looks weird but works
-  (is (= (clean-map (as-simple-requirement ''lucky-7)) '{:major :*, :feature lucky-7}))
+  (is (= (dismap (as-simple-requirement ''lucky-7)) '{:major :*, :feature lucky-7}))
   ;; vector with no version also works
-  (is (= (clean-map (as-simple-requirement '[lucky-7])) '{:major :*, :feature lucky-7})))
+  (is (= (dismap (as-simple-requirement '[lucky-7])) '{:major :*, :feature lucky-7})))
 
 (deftest check-lucky-reader
   (is (= 7 #x/condf [lucky-7 :bad 'miner.wilkins-test/lucky-7 7]))
