@@ -45,12 +45,13 @@
 (deftest foo-test
   (is (= (foo42) 42)))
 
-(defn dismap [m]
+(defn shrink-map
   "Remove falsey values and associated keys from the map `m`"
+  [m]
   (reduce-kv (fn [r k v] (if-not v (dissoc r k) r)) m m))
 
 (deftest parsing-features
-  (are [x y] (= (dismap (as-feature x)) y)
+  (are [x y] (= (shrink-map (as-feature x)) y)
        "foo-bar-1" {:feature 'foo-bar, :major 1}
        "foo-bar1" {:feature 'foo-bar1}
        "foo-bar-1.2+" {:plus true, :feature 'foo-bar, :major 1, :minor 2}
@@ -60,7 +61,7 @@
 
 (deftest parsing-requirements
   ;; slightly different from as-feature for the case where no version is specified
-  (are [x y] (= (dismap (as-simple-requirement x)) y)
+  (are [x y] (= (shrink-map (as-simple-requirement x)) y)
        "foo-bar-1" {:feature 'foo-bar :major 1}
        "foo-bar1" {:feature 'foo-bar1 :major :*}
        "foo-bar-1.2+" {:plus true, :feature 'foo-bar, :major 1, :minor 2}
@@ -128,13 +129,13 @@ miner.wilkins-test/Foo-50+ :wrong-version miner.wilkins-test/Foo-3.2+ 42 else :b
 
 (deftest lucky-parsing
   ;; normal parsing takes the 7 as a version
-  (is (= (dismap (as-simple-requirement 'lucky-7)) '{:feature lucky, :major 7}))
+  (is (= (shrink-map (as-simple-requirement 'lucky-7)) '{:feature lucky, :major 7}))
   ;; quote protects the -7 as part of the symbol
-  (is (= (dismap (as-simple-requirement '(quote lucky-7))) '{:major :*, :feature lucky-7}))
+  (is (= (shrink-map (as-simple-requirement '(quote lucky-7))) '{:major :*, :feature lucky-7}))
   ;; double single-quote looks weird but works
-  (is (= (dismap (as-simple-requirement ''lucky-7)) '{:major :*, :feature lucky-7}))
+  (is (= (shrink-map (as-simple-requirement ''lucky-7)) '{:major :*, :feature lucky-7}))
   ;; vector with no version also works
-  (is (= (dismap (as-simple-requirement '[lucky-7])) '{:major :*, :feature lucky-7})))
+  (is (= (shrink-map (as-simple-requirement '[lucky-7])) '{:major :*, :feature lucky-7})))
 
 (deftest check-lucky-reader
   (is (= 7 #x/condf [lucky-7 :bad 'miner.wilkins-test/lucky-7 7]))
@@ -172,10 +173,26 @@ miner.wilkins-test/Foo-50+ :wrong-version miner.wilkins-test/Foo-3.2+ 42 else :b
 
 (def ^{:feature false} disabled-feature)
 
-(deftest disabled-feature
-  (is 13  (runtime-condf (not miner.wilkins-test/disabled-feature) 13
-                        miner.wilkins-test/disabled-feature 7)))
+(deftest test-disabled-feature
+  ;; note to self: don't name a test the same as the var you're testing!
+  (is (= 13  (runtime-condf (not miner.wilkins-test/disabled-feature) 13
+                            miner.wilkins-test/disabled-feature 7))))
 
 (deftest compile-condf-test
-  (is :ok (compile-condf (and clj jdk missing) :wrong (and clj jdk) :ok clj :too-late)))
+  (is (= :ok (compile-condf (and clj jdk missing) :wrong (and clj jdk) :ok clj :too-late))))
 
+
+(deftest weird-core-asyn-version
+  ;; the qualifier looks weird, but core.async has a weird versioning system during alpha
+  (is (= (as-simple-requirement "core.async-0.1.301.0-deb34a-alpha")
+         (as-simple-requirement 'core.async-0.1.301.0-deb34a-alpha)
+         '{:feature core.async, :major 0, :minor 1, :incremental 301,
+           :qualifier ".0-deb34a-alpha"})))
+
+(deftest unusual-feature-names
+  (is (= (as-simple-requirement 'foo-bar1) '{:major :*, :feature foo-bar1}))
+  (is (= (as-simple-requirement 'foo-bar-1.*) '{:feature foo-bar, :major 1, :minor :*}))
+  (is (= (as-simple-requirement '[foo-bar-1.*]) '{:major :*, :feature foo-bar-1.*})))
+
+
+  

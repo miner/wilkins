@@ -5,6 +5,9 @@
             miner.wilkins.features))
 
 
+(def version-keys [:version :major :minor :incremental :qualifier])
+;; build is qualifier
+
 (defn simple-requirement? [x] (boolean (and (map? x) (:feature x))))
 
 ;; converts a string, symbol, or vector as necessary to a feature map
@@ -42,7 +45,7 @@
   `'~(as-version vspec))
 
 
-(defn compare-versions [a b]
+(defn- compare-versions [a b]
   ;; allows last element to be :* as a wildcard
   ;; returns 0, -1 or 1 (like compare)
   (let [comp-vers (fn [a b ks]
@@ -62,7 +65,9 @@
   {:pre [(map? actual) (map? requirement)]}
   ;; args are feature maps
   ;; assumes ids were already matched (might have been equivalent aliases, not identical)
-  ;; if requirement has a qualifier everything must match exactly, otherwise qualifier doesn't matter
+  ;; if requirement has a qualifier everything must match exactly,
+  ;; otherwise qualifier doesn't matter.
+  ;; :version is only for (debugging) information and is not checked
   (and (or (not (:qualifier requirement)) (= (:qualifier actual) (:qualifier requirement)))
        ((if (and (:plus requirement) (not (:qualifier requirement))) (complement neg?) zero?)
         (compare-versions actual requirement))))
