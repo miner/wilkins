@@ -2,6 +2,13 @@
 
 Experimental lib for Clojure conditional features.
 
+*Nota bene*: This library has been superseded by the official Clojure/core team plan to implement
+Feature Expressions in the upcoming Clojure 1.7 release.
+
+http://dev.clojure.org/display/design/Feature+Expressions
+
+http://dev.clojure.org/jira/browse/CLJ-1424
+
 ## Usage
 
 leiningen dependency `[com.velisco/wilkins "a.b.c"]`
