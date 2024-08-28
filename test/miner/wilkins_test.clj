@@ -27,7 +27,7 @@
 (defn foo42 []
   (get {:a 1 :b 2 :ok 42}
        #x/condf [clj-1.3.* :unsupported
-                 (or jdk-1.9+ clj-2.0.*) :untested
+                 (or jdk-31.9+ clj-2.0.*) :untested
                  (and clj-1.4+ jdk-1.5+) :ok]
        :fail))
 
@@ -108,7 +108,7 @@ miner.wilkins-test/Foo-50+ :wrong-version miner.wilkins-test/Foo-3.2+ 42 else :b
                             (or clj-1.5+ [clj "1.4"]) (dec (* n n))
                             else :bad)))
     (is (= 17 (runtime-condf (and clj (not Foobar3.2) miner.wilkins-test/Bar-31.2+) :bad 
-                            (or jdk-2.0 [clj "1.9+"]) :clj-future
+                            (or jdk-2.0 [clj "1.13+"]) :clj-future
                             else (+ 3 4 n))))))
 
 (deftest short-names
